@@ -8,19 +8,19 @@ makedocs(;
   doctest = true,
   linkcheck = false,
   strict = false,
-  authors = "Abel Soares Siqueira <abel.s.siqueira@gmail.com> and contributors",
-  repo = "https://github.com/JuliaSmoothOptimizers/JSOTemplate.jl/blob/{commit}{path}#{line}",
-  sitename = "JSOTemplate.jl",
+  authors = "Valentin Dijon <vanadjy@gmail.com> and contributors",
+  repo = "https://github.com/JuliaSmoothOptimizers/BilevelBenchmark.jl/blob/{commit}{path}#{line}",
+  sitename = "BilevelBenchmark.jl",
   format = Documenter.HTML(;
     prettyurls = get(ENV, "CI", "false") == "true",
-    canonical = "https://JuliaSmoothOptimizers.github.io/JSOTemplate.jl",
+    canonical = "https://github.com/Vanadjy/BilevelBenchmark.jl",
     assets = ["assets/style.css"],
   ),
   pages = ["Home" => "index.md", "Reference" => "reference.md"],
 )
 
 deploydocs(;
-  repo = "github.com/JuliaSmoothOptimizers/JSOTemplate.jl",
+  repo = "github.com/Vanadjy/BilevelBenchmark.jl",
   push_preview = true,
   devbranch = "main",
 )

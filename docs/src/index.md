@@ -4,4 +4,4 @@ CurrentModule = JSOTemplate
 
 # JSOTemplate
 
-Documentation for [JSOTemplate](https://github.com/JuliaSmoothOptimizers/JSOTemplate.jl).
+Documentation for [BilevelBenchmark](https://github.com/JuliaSmoothOptimizers/JSOTemplate.jl).
