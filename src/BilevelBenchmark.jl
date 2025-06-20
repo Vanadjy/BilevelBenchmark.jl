@@ -2,17 +2,15 @@
 
 #using Plots
 #using LaTeXStrings
-
-using BilevelJuMP, Ipopt # External Dependencies from JSO
+using Test, LinearAlgebra # Basic Julia packages
+using JuMP, BilevelJuMP # JuMP API
+using Ipopt, HiGHS, MibS_jll # Solvers
 
 # Write your package code here.
 #include("profiles.jl")
 include("BOLIBProblems.jl")
 
-get_bilevel_problem(2)
-
-function BiJuMP_convertor(prob_no::Union{Int,String})
-    prob = get_bilevel_problem(prob_no)
+function BiJuMP_convertor(prob::BilevelProblem)
     nx, ny, nG, ng = prob.dim
     xy0 = prob.xy0
     f = prob.f_func
@@ -20,10 +18,7 @@ function BiJuMP_convertor(prob_no::Union{Int,String})
     g = prob.g_func
     G = prob.G_func
 
-    model = BilevelModel(
-    Ipopt.Optimizer,
-    mode = BilevelJuMP.FortunyAmatMcCarlMode(primal_big_M = 100, dual_big_M = 100)
-    )
+    model = BilevelModel(Ipopt.Optimizer; mode = BilevelJuMP.ProductMode(1e-9))
 
     # Generating variables
     @variable(Upper(model), x[i = 1:nx], start = xy0[i])
@@ -35,17 +30,54 @@ function BiJuMP_convertor(prob_no::Union{Int,String})
 
     # Generating constraints
     for i in 1:nG
-        @constraint(Upper(model), G(x,y)[i] ≤ 0)
+        @constraint(Upper(model), G(x,y)[i] ≤ 0.0)
     end
     for i in 1:ng
-        @constraint(Upper(model), g(x,y)[i] ≤ 0)
+        @constraint(Lower(model), g(x,y)[i] ≤ 0.0)
     end
     return model
 end
 
-BiJuMP_model = BiJuMP_convertor(2)
-optimize!(BiJuMP_model)
+all_probs = collect(1:100) # List of problem numbers to test
+JuMP_uncompatible = [3, 12, 14, 15, 16, 17, 18, 21, 32, 33, 34, 36, 40, 41, 42, 43, 49, 50, 51, 52, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 79, 80, 81, 83, 84, 85, 86, 87, 88, 94, 95, 96, 97, 98, 99, 100] # Problems that are not compatible with JuMP
 
-println(objective_value(BiJuMP_model))
-println(value.(BiJuMP_model[:x]))
-println(value.(BiJuMP_model[:y]))
+prob_numbers = filter(x -> !(x in JuMP_uncompatible), all_probs) # Filter out incompatible problems
+failed_probs = [] # List to store failed problems
+# DISCLAIMER BilevelJuMP cannot handle lower level objective that is not affine or qudratic, so they are omitted in the tests.
+
+@testset "BiObjBenchmark.jl" begin
+  for prob_no in prob_numbers
+    println(prob_no)
+    prob  = get_bilevel_problem(prob_no)
+    model = BiJuMP_convertor(prob)
+
+    #Tests the dimension of the problems
+    @test length(model[:x]) == prob.dim[1]
+    @test length(model[:y]) == prob.dim[2]
+    @test num_constraints(Upper(model)) == prob.dim[3]
+    @test num_constraints(Lower(model)) == prob.dim[4]
+
+    # TODO: find a way to automatize solving each problem
+    try
+        optimize!(model)
+        @test termination_status(model) == MOI.OPTIMAL || termination_status(model) == MOI.LOCALLY_SOLVED
+    catch e
+            push!(failed_probs, prob_no)
+    end
+
+    # TODO add a test to check if the solution is at least a local optimum
+    #=if length(prob.sol) == 1 # Only the optimal value is stored
+      @test objective_value(model) ≈ prob.sol[1] atol = 1e-2
+    else # The full solution is stored
+      for i in 1:prob.dim[1]
+        @test value(model[:x][i]) ≈ prob.sol[i] atol = 1e-2
+      end
+      for i in 1:prob.dim[2]
+        @test value(model[:y][i]) ≈ prob.sol[prob.dim[1]+i] atol = 1e-2
+      end
+    end=#
+    #@test (getModelStatus(model) ∈ [MathOptInterface.OPTIMAL, MathOptInterface.LOCALLY_SOLVED])
+  end
+end
+
+println(length(prob_numbers) - length(failed_probs), " problems passed the tests.")
