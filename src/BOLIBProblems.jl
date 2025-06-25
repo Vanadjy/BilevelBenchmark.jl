@@ -15,8 +15,7 @@ struct BilevelProblem
 end
 
 function get_bilevel_problem(prob_no::Union{Int,String})
-
-# Problem: AiyoshiShimizu1984Ex2
+    ## ---------------- NONLINEAR BILEVEL PROBLEMS ---------------- ##
     if prob_no == 1 || prob_no == "AiyoshiShimizu1984Ex2"
         return BilevelProblem(
             "AiyoshiShimizu1984Ex2",
@@ -1948,11 +1947,684 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             ],
             [4.06095, 2.68227, 1.48710]
         )
-    end
+
+    elseif prob_no == 101 || prob_no == "Outrata1994Ex31"
+        return BilevelProblem(
+            "Outrata1994Ex31",
+            [1, 2, 2, 4],
+            [0.0, 0.0, 0.0],
+            [3.208,  -20.531, 2.0],
+            (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
+            (x, y) -> 0.5*(1 + 0.2*x[1])*y[1]^2 + 0.5*(1 + 0.1*x[1])*y[2]^2 - (3 + 1.333*x[1])*y[1] - x[1]*y[2],
+            (x, y) -> [x[1] - 10, -x[1]],
+            (x, y) -> [
+                -0.333*y[1] + y[2] + 0.1*x[1] - 1,
+                sum(y.^2) - 0.1*x[1] - 9,
+                -y[1],
+                -y[2]
+            ],
+            [4.0604, 2.6822, 1.4871]
+        )
+
+    elseif prob_no == 102 || prob_no == "OutrataCervinka2009"
+        return BilevelProblem(
+            "OutrataCervinka2009",
+            [2, 2, 1, 3],
+            [1.0, 1.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0],
+            (x, y) -> -2*x[1] - 0.5*x[2] - y[2],
+            (x, y) -> y[1] - y[2] + x[1]*y[1] + x[2]*y[2] + 0.5*y[1]^2 + 0.5*y[2]^2,
+            (x, y) -> [x[1]],
+            (x, y) -> [
+                y[2],
+                -y[1] + y[2],
+                y[1] + y[2]
+            ],
+            zeros(Float64, 4)
+        )
+
+    elseif prob_no == 103 || prob_no == "PaulaviciusAdjiman2017a"
+        return BilevelProblem(
+            "PaulaviciusAdjiman2017a",
+            [1, 1, 4, 2],
+            [1.0, 1.0],
+            [0.25, 0.0, 1.0],
+            (x, y) -> x[1]^2 + y[1]^2,
+            (x, y) -> x[1]*y[1]^2 - 0.5*y[1]^4,
+            (x, y) -> [-x[1] - 1, x[1] - 1, -y[1] - 1, y[1] - 1],
+            (x, y) -> [-y[1] - 1, y[1] - 1],
+            [0.5, 0.0]
+        )
+
+    elseif prob_no == 104 || prob_no == "PaulaviciusAdjiman2017b"
+        return BilevelProblem(
+            "PaulaviciusAdjiman2017b",
+            [1, 1, 4, 2],
+            [0.0, 0.0],
+            [0.25, 0.0, 1.0],
+            (x, y) -> x[1] + y[1],
+            (x, y) -> 0.5*x[1]*y[1]^2 - x[1]^3*y[1],
+            (x, y) -> [-x[1] - 1, x[1] - 1, -y[1] - 1, y[1] - 1],
+            (x, y) -> [-y[1] - 1, y[1] - 1],
+            [−1.0, −1.0]
+        )
+
+    elseif prob_no == 105 || prob_no == "SahinCiric1998Ex2"
+        return BilevelProblem(
+            "SahinCiric1998Ex2",
+            [1, 1, 2, 3],
+            [1.0, 1.0],
+            [-2.0, -1.5, 1.0],
+            (x, y) -> (x[1] - 3)^2 + (y[1] - 2)^2,
+            (x, y) -> (y[1] - 5)^2,
+            (x, y) -> [-x[1], x[1] - 8],
+            (x, y) -> [
+                -2*x[1] + y[1] - 1,
+                x[1] - 2*y[1] + 2,
+                x[1] + 2*y[1] - 14
+            ],
+            [1.0, 3.0]
+        )
+
+    elseif prob_no == 106 || prob_no == "ShimizuAiyoshi1981Ex1"
+        return BilevelProblem(
+            "ShimizuAiyoshi1981Ex1",
+            [1, 1, 3, 3],
+            [1.0, 1.0],
+            [100.0, 0.0, 1.0],
+            (x, y) -> x[1]^2 + (y[1] - 10)^2,
+            (x, y) -> (x[1] + 2*y[1] - 30)^2,
+            (x, y) -> [x[1] - 15, -x[1] + y[1], -x[1]],
+            (x, y) -> [x[1] + y[1] - 20, y[1] - 20, -y[1]],
+            [10.0, 10.0]
+        )
+
+    elseif prob_no == 107 || prob_no == "ShimizuAiyoshi1981Ex2"
+        return BilevelProblem(
+            "ShimizuAiyoshi1981Ex2",
+            [2, 2, 3, 4],
+            [1.0, 1.0, 1.0, 1.0],
+            [225.0, 100.0, 1.0],
+            (x, y) -> sum((x .- [30.0, 20.0]).^2) - 20*y[1] + 20*y[2],
+            (x, y) -> sum((x .- y).^2),
+            (x, y) -> [-x[1] - 2*x[2] + 30, x[1] + x[2] - 25, x[2] - 15],
+            (x, y) -> [y[1] - 10, y[2] - 10, -y[1], -y[2]],
+            [20.0, 5.0, 10.0, 5.0]
+        )
+
+    elseif prob_no == 108 || prob_no == "ShimizuEtal1997a"
+        return BilevelProblem(
+            "ShimizuEtal1997a",
+            [1, 1, 0, 3],
+            [1.0, 1.0],
+            [NaN, NaN, 0.0],
+            (x, y) -> (x[1] - 5)^2 + (2*y[1] + 1)^2,
+            (x, y) -> (y[1] - 1)^2 - 1.5*x[1]*y[1],
+            (x, y) -> Float64[],
+            (x, y) -> [-3*x[1] + y[1] + 3, x[1] - 0.5*y[1] - 4, x[1] + y[1] - 7],
+            [5.0, 2.0]
+        )
+
+    elseif prob_no == 109 || prob_no == "ShimizuEtal1997b"
+        return BilevelProblem(
+            "ShimizuEtal1997b",
+            [1, 1, 2, 2],
+            [1.0, 1.0],
+            [2250.0,  197.75, 1.0],
+            (x, y) -> 16*x[1]^2 + 9*y[1]^2,
+            (x, y) -> (x[1] + y[1] - 20)^4,
+            (x, y) -> [-x[1], -4*x[1] + y[1]],
+            (x, y) -> [-y[1], 4*x[1] + y[1] - 50],
+            [11.25, 5.0] #Careful, [7.2, 12.8] is a local optimum
+        )
+
+    elseif prob_no == 110 || prob_no == "SinhaMaloDeb2014TP3"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP3",
+            [2, 2, 3, 4],
+            [1.0, 1.0, 1.0, 1.0],
+            [-18.679, -1.016, 2.0],
+            (x, y) -> x[1]^2*(-1) + x[2]^2*(-3) - 4*y[1] + y[2]^2,
+            (x, y) -> 2*x[1]^2 + y[1]^2 - 5*y[2],
+            (x, y) -> [-x[1], -x[2], x[1]^2 + 2*x[2] - 4],
+            (x, y) -> [
+                -y[1], -y[2],
+                -x[2] + -y[2] + 4*y[1] + 4,
+                -x[1]^2 + 2*x[1] - x[2]^2 + 2*y[1] - y[2] - 3
+            ],
+            -18.6787
+        )
+
+    elseif prob_no == 111 || prob_no == "SinhaMaloDeb2014TP6"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP6",
+            [1, 2, 1, 6],
+            [1.0, 1.0, 1.0],
+            [-1.209, 7.615, 2.0],
+            (x, y) -> (x[1] - 1)^2 - 2*x[1] + 2*y[1],
+            (x, y) -> sum((2*y .- [4.0, 1.0]).^2) + x[1]*y[1],
+            (x, y) -> [-x[1]],
+            (x, y) -> [
+                -y[1], -y[2],
+                4*x[1] + 5*y[1] + 4*y[2] - 12,
+                -4*x[1] - 5*y[1] + 4*y[2] + 4,
+                4*x[1] - 4*y[1] + 5*y[2] - 4,
+                -4*x[1] + 4*y[1] + 5*y[2] - 4
+            ],
+            -1.2091
+        )
+
+    elseif prob_no == 112 || prob_no == "SinhaMaloDeb2014TP7"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP7",
+            [2, 2, 4, 4],
+            [1.0, 1.0, 0.0, 1.0],
+            [-1.961, 1.961, 2.0],
+            (x, y) -> -(x[1] + y[1])*(x[2] + y[2])/(1 + x[1]*y[1] + x[2]*y[2]),
+            (x, y) -> (x[1] + y[1])*(x[2] + y[2])/(1 + x[1]*y[1] + x[2]*y[2]),
+            (x, y) -> [-x[1], -x[2], x[1] - x[2], x[1]^2 + x[2]^2 - 100],
+            (x, y) -> [-y[1], -y[2], y[1] - x[2], y[2] - x[1]],
+            -1.96
+        )
+
+    elseif prob_no == 113 || prob_no == "SinhaMaloDeb2014TP8"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP8",
+            [2, 2, 5, 6],
+            [1.0, 1.0, 1.0, 1.0],
+            [0.0, 100.0, 1.0],
+            (x, y) -> abs(2*x[1] + 2*x[2] - 3*y[1] - 3*y[2] - 60),
+            (x, y) -> sum((y .- x .+ 20).^2),
+            (x, y) -> [
+                -x[1], -x[2], x[1] - 50, x[2] - 50, x[1] + x[2] + y[1] - 2*y[2] - 40
+            ],
+            (x, y) -> [
+                2*y[1] - x[1] + 10,
+                y[1] - 20,
+                -y[1] - 10,
+                2*y[2] - x[2] + 10,
+                y[2] - 20,
+                -y[2] - 10
+            ],
+            0.0
+        )
+
+    elseif prob_no == 114 || prob_no == "SinhaMaloDeb2014TP9"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP9",
+            [10, 10, 0, 20],
+            zeros(Float64, 20),
+            [0.0, 1.0, 2.0],
+            (x, y) -> sum((x .- 1).^2 + y.^2),
+            (x, y) -> begin
+                t = sqrt.(1:10)
+                exp((1 + sum(y.^2)/400 - prod(cos.(y ./ t)))*sum(x.^2))
+            end,
+            (x, y) -> Float64[],
+            (x, y) -> [y .- pi; -y .- pi],
+            0.0
+        )
+
+    elseif prob_no == 115 || prob_no == "SinhaMaloDeb2014TP10"
+        return BilevelProblem(
+            "SinhaMaloDeb2014TP10",
+            [10, 10, 0, 20],
+            zeros(Float64, 20),
+            [0.0, 1.0, 2.0],
+            (x, y) -> sum((x .- 1).^2 + y.^2),
+            (x, y) -> begin
+                t = sqrt.(1:10)
+                xy = x .* y
+                exp(1 + sum(xy.^2)/4000 - prod(cos.(xy ./ t)))
+            end,
+            (x, y) -> Float64[],
+            (x, y) -> [y .- pi; -y .- pi],
+            0.0
+        )
+
+    elseif prob_no == 116 || prob_no == "TuyEtal2007"
+        return BilevelProblem(
+            "TuyEtal2007",
+            [1, 1, 2, 3],
+            [5.0, 0.0],
+            [22.5, -1.5, 1.0],
+            (x, y) -> x[1]^2 + y[1]^2,
+            (x, y) -> -y[1],
+            (x, y) -> [-x[1], -y[1]],
+            (x, y) -> [
+                3*x[1] + y[1] - 15,
+                x[1] + y[1] - 7,
+                x[1] + 3*y[1] - 15
+            ],
+            [4.492188, 1.523438]
+        )
+
+    elseif prob_no == 117 || prob_no == "Vogel2012"
+        return BilevelProblem(
+            "Vogel2012",
+            [1, 1, 2, 1],
+            [1.0, 1.0],
+            [1.0, -2.0, 1.0],
+            (x, y) -> (y[1] + 1)^2,
+            (x, y) -> y[1]^3 - 3*y[1],
+            (x, y) -> [-3 - x[1], x[1] - 2],
+            (x, y) -> [x[1] - y[1]],
+            [-2.0, -2.0]
+        )
+
+    elseif prob_no == 118 || prob_no == "WanWangLv2011"
+        return BilevelProblem(
+            "WanWangLv2011",
+            [2, 3, 0, 8],
+            [0.0, 0.5, 0.0, 0.0, 0.0],
+            [10.62, -0.50, 1.0],
+            (x, y) -> (1 + [1.0, -1.0]'*x + 2*y[2])*(8 - x[1] + [-2.0, 1.0, 5.0]'*y),
+            (x, y) -> [2.0, -1.0, 1.0]'*y,
+            (x, y) -> Float64[],
+            (x, y) -> [
+                [-1.0, 1.0, 1.0]'*y - 1,
+                2*x[1] + [-1.0, 2.0, -0.5]'*y - 1,
+                2*x[2] + [2.0, -1.0, -0.5]'*y - 1,
+                -x[1], -x[2], -y[1], -y[2], -y[3]
+            ],
+            [0.0, 0.75, 0.0, 0.5, 0.0]
+        )
+
+    elseif prob_no == 119 || prob_no == "YeZhu2010Ex42"
+        return BilevelProblem(
+            "YeZhu2010Ex42",
+            [1, 1, 2, 1],
+            [-1.0, -1.0],
+            [1.0, -2.0, 1.0],
+            (x, y) -> (x[1] - 1)^2 + y[1]^2,
+            (x, y) -> y[1]^3 - 3*y[1],
+            (x, y) -> [-3 - x[1], x[1] - 2],
+            (x, y) -> [x[1] - y[1]],
+            [1.0, 1.0]
+        )
+
+    elseif prob_no == 120 || prob_no == "YeZhu2010Ex43"
+        return BilevelProblem(
+            "YeZhu2010Ex43",
+            [1, 1, 2, 1],
+            [-1.0, -1.0],
+            [1.0, -2.0, 1.0],
+            (x, y) -> (x[1] - 0.5)^2 + (y[1] - 2)^2,
+            (x, y) -> y[1]^3 - 3*y[1],
+            (x, y) -> [-3 - x[1], x[1] - 2],
+            (x, y) -> [x[1] - y[1]],
+            [1.0, 1.0]
+        )
+
+    elseif prob_no == 121 || prob_no == "Yezza1996Ex31"
+        return BilevelProblem(
+            "Yezza1996Ex31",
+            [1, 1, 2, 2],
+            [1.0, 1.0],
+            [1.5, -2.5, 1.0],
+            (x, y) -> -(4*x[1] - 3)*y[1] + 2*x[1] + 1,
+            (x, y) -> -(1 - 4*x[1])*y[1] - 2*x[1] - 2,
+            (x, y) -> [-x[1], x[1] - 1],
+            (x, y) -> [-y[1], y[1] - 1],
+            [0.25, 0.0]
+        )
+
+    elseif prob_no == 122 || prob_no == "Yezza1996Ex41"
+        return BilevelProblem(
+            "Yezza1996Ex41",
+            [1, 1, 0, 2],
+            [-1.0, -1.0],
+            [0.5, 2.5, 1.0],
+            (x, y) -> 0.5*(y[1] - 2)^2 + 0.5*(x[1] - y[1] - 2)^2,
+            (x, y) -> 0.5*y[1]^2 + x[1] - y[1],
+            (x, y) -> Float64[],
+            (x, y) -> [-y[1], y[1] - x[1]],
+            [3.0, 1.0]
+        )
+
+    elseif prob_no == 123 || prob_no == "Zlobec2001a"
+        return BilevelProblem(
+            "Zlobec2001a",
+            [1, 2, 0, 4], # /!\ changed regarding the original one as the constraint dimensions does not fit
+            [1.0, 1.0, 1.0],
+            [-1.0, -1.0, 1.0],
+            (x, y) -> -y[1]/x[1],
+            (x, y) -> -y[1] - y[2],
+            (x, y) -> Float64[],
+            (x, y) -> [
+                -1 + y[1],
+                x[1] + y[1],
+                -y[1],
+                -y[2]
+            ],
+            [1.0, 1.0, 0.0]
+        )
+
+    elseif prob_no == 124 || prob_no == "Zlobec2001b"
+        @warn "Zlobec2001b is not a closed problem, no optimal solution is available"
+        return BilevelProblem(
+            "Zlobec2001b",
+            [1, 1, 2, 4],
+            [1.0, 1.0],
+            [NaN, NaN, 0.0],
+            (x, y) -> x[1] + y[1],
+            (x, y) -> -y[1],
+            (x, y) -> [-x[1], x[1] - 1],
+            (x, y) -> [-y[1], y[1] - 1, -x[1]*y[1], x[1]*y[1]],
+            [] # No optimal solution as problem not closed
+        )
+
+    elseif prob_no == 125 || prob_no == "DesignCentringP1"
+        return BilevelProblem(
+            "DesignCentringP1",
+            [3, 6, 3, 3],
+            ones(Float64, 9),
+            [NaN, NaN, 0.0],
+            (x, y) -> -π*x[3]^2,
+            (x, y) -> y[1] + y[2]^2 - y[3]/4 - y[4] + y[6],
+            (x, y) -> [-y[1] - y[2]^2, y[3]/4 + y[4] - 3/4, -y[6] - 1],
+            (x, y) -> [
+                (y[1] - x[1])^2 + (y[2] - x[2])^2 - x[3]^2,
+                (y[3] - x[1])^2 + (y[4] - x[2])^2 - x[3]^2,
+                (y[5] - x[1])^2 + (y[6] - x[2])^2 - x[3]^2
+            ],
+        [0.7486, −0.2304, 0.7696, −0.0084, −0.0917, 0.9352, 0.5162, 0.7486, −1.0]
+        )
+
+    elseif prob_no == 126 || prob_no == "DesignCentringP2"
+        return BilevelProblem(
+            "DesignCentringP2",
+            [4, 6, 5, 3],
+            ones(Float64, 10),
+            [NaN, NaN, 0.0],
+            (x, y) -> -π*x[3]*x[4],
+            (x, y) -> y[1] + y[2]^2 - y[3]/4 - y[4] + y[6],
+            (x, y) -> [
+                -y[1] - y[2]^2,
+                y[3]/4 + y[4] - 3/4,
+                -y[6] - 1,
+                x[3] - 1,
+                x[4] - 1
+            ],
+            (x, y) -> [
+                (x[1] - y[1])^2 / x[3]^2 + (x[2] - y[2])^2 / x[4]^2 - 1,
+                (x[1] - y[3])^2 / x[3]^2 + (x[2] - y[4])^2 / x[4]^2 - 1,
+                (x[1] - y[5])^2 / x[3]^2 + (x[2] - y[6])^2 / x[4]^2 - 1
+            ],
+            [3.0, 0.0, 1.0, 1.0, 3.0, 0.0, 3.0, 0.0, 3.0, 0.0]
+        )
+
+    elseif prob_no == 127 || prob_no == "DesignCentringP3"
+        return BilevelProblem(
+            "DesignCentringP3",
+            [6, 6, 3, 3],
+            [1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            [NaN, NaN, 0.0],
+            (x, y) -> -π*abs(x[3]*x[6] - x[4]*x[5]),
+            (x, y) -> y[1] + y[2]^2 - y[3]/4 - y[4] + y[6],
+            (x, y) -> [
+                -y[1] - y[2]^2,
+                y[3]/4 + y[4] - 3/4,
+                -y[6] - 1
+            ],
+            (x, y) -> begin
+                z = [x[1]; x[2]]
+                A = inv([x[3] x[4]; x[5] x[6]] * [x[3] x[5]; x[4] x[6]])
+                [
+                    ([y[1]; y[2]] - z)' * A * ([y[1]; y[2]] - z) - 1,
+                    ([y[3]; y[4]] - z)' * A * ([y[3]; y[4]] - z) - 1,
+                    ([y[5]; y[6]] - z)' * A * ([y[5]; y[6]] - z) - 1
+                ]
+            end,
+            3.7234
+        )
+
+    elseif prob_no == 128 || prob_no == "DesignCentringP4"
+        return BilevelProblem(
+            "DesignCentringP4",
+            [4, 6, 3, 12],
+            ones(Float64, 10),
+            [NaN, NaN, 0.0],
+            (x, y) -> -(x[1] - x[3]) * (x[2] - x[4]),
+            (x, y) -> y[1] + y[2]^2 - y[3]/4 - y[4] + y[6],
+            (x, y) -> [
+                -y[1] - y[2]^2,
+                y[3]/4 + y[4] - 3/4,
+                -y[6] - 1
+            ],
+            (x, y) -> [y .- [x[1], x[2], x[1], x[2], x[1], x[2]] ; 
+                    y .- [x[3], x[4], x[3], x[4], x[3], x[4]]],
+            [−1.0, 1.0, −1.0, 1.0, −1.0, 1.0, −1.0, 1.0, −1.0, 1.0]
+        )
+    # /!\ TODO: check NetworkDesign problems in details
+
+    elseif prob_no == 129 || prob_no == "NetworkDesignP1"
+        return BilevelProblem(
+            "NetworkDesignP1",
+            [5, 5, 5, 11],
+            zeros(Float64, 10),
+            [300.5, 419.8, 2.0],
+            (x, y) -> begin
+                xy = y ./ (1 .+ x)
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y + 100*sum(x)
+            end,
+            (x, y) -> begin
+                xy = y ./ (1 .+ x) ./ 2
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y
+            end,
+            (x, y) -> -x .- 1,
+            (x, y) -> begin
+                A = [1 0 1 0 1; 0 1 -1 0 -1; -1 0 -1 1 0]
+                vcat(A * y .+ [-6; 0; 0], -A * y .+ [6; 0; 0], -y)
+            end,
+            300.5
+        )
+
+    elseif prob_no == 130 || prob_no == "NetworkDesignP2"
+        return BilevelProblem(
+            "NetworkDesignP2",
+            [5, 5, 5, 11],
+            zeros(Float64, 10),
+            [142.9, 81.95, 2.0],
+            (x, y) -> begin
+                xy = y ./ (1 .+ x)
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y + sum(x)
+            end,
+            (x, y) -> begin
+                xy = y ./ (1 .+ x) ./ 2
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y
+            end,
+            (x, y) -> -x .- 1,
+            (x, y) -> begin
+                A = [1 0 1 0 1; 0 1 -1 0 -1; -1 0 -1 1 0]
+                vcat(A * y .+ [-6; 0; 0], -A * y .+ [6; 0; 0], -y)
+            end,
+            142.9
+        )
+
+        # Example for N = 10
+    elseif prob_no == 131 || prob_no == "RobustPortfolioP1"
+        @warn "RobustPortfolioP1 is encoded as a special case where N=10 and δ=2."
+        return BilevelProblem(
+            "RobustPortfolioP1",
+            [11, 10, 13, 11], # Initial point depends on N
+            ones(Float64, 21),
+            [1.15, 0.0, 2.0],
+            (x, y) -> -x[end],
+            (x, y) -> y' * x[1:end-1] - x[end],
+            (x, y) -> begin
+                N = length(y)
+                [x[end] - y' * x[1:N]; -x[1:N]; sum(x[1:N]) - 1; 1 - sum(x[1:N])]
+            end,
+            (x, y) -> begin
+                N = length(y)
+                I = collect(1:N)
+                d = 2
+                si = ((0.05 / 3 / N) * sqrt(2 * N * (N + 1) .* I)).^d
+                yi = 1.15 .+ (0.05 / N) .* I
+                [sum(abs.(y .- yi).^d ./ si) - 1.5^d; -y]
+            end,
+            [fill(1/10, 10) ; fill(1.15, 11)]
+        )
+
+    elseif prob_no == 132 || prob_no == "RobustPortfolioP2"
+        @warn "RobustPortfolioP2 is encoded as a special case where N=10"
+        return BilevelProblem(
+            "RobustPortfolioP2",
+            [11, 10, 13, 11], # N is problem parameter
+            ones(Float64, 21), # Initial point depends on N
+            [1.15, 0.0, 2.0],
+            (x, y) -> -x[end],
+            (x, y) -> y' * x[1:end-1] - x[end],
+            (x, y) -> begin
+                N = length(y)
+                [x[end] - y' * x[1:N]; -x[1:N]; sum(x[1:N]) - 1; 1 - sum(x[1:N])]
+            end,
+            (x, y) -> begin
+                N = length(y)
+                I = collect(1:N)
+                si = ((0.05 / 3 / N)^2 * (2 * N * (N + 1) .* I))
+                yi = 1.15 .+ (0.05 / N) .* I
+                sx = 1.5 * (1 + sum((x[1:N] .- 1 / N).^2))
+                [sum((y .- yi).^2 ./ si) - sx^2; -y]
+            end,
+            [fill(1/10, 10) ; fill(1.15, 11)]
+        )
+
+    elseif prob_no == 133 || prob_no == "TollSettingP1"
+        return BilevelProblem(
+            "TollSettingP1",
+            [3, 8, 3, 18],
+            [0.0, 5.0, 5.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [-7.0, 12.0, 2.0],
+            (x, y) -> -[y[3], y[4], y[8]]' * x,
+            (x, y) -> [2, 6, 5 + x[1], x[2], 4, 2, 6, x[3]]' * y,
+            (x, y) -> -x,
+            (x, y) -> begin
+                A = [1 1 1 0 0 0 0 0; -1 0 0 1 1 0 0 0;
+                    0 -1 0 -1 0 1 1 0; 0 0 0 0 -1 -1 0 1; 0 0 1 0 0 0 1 1]
+                vcat(A * y .+ [-1; 0; 0; 0; -1], -A * y .+ [1; 0; 0; 0; 1], -y)
+            end,
+            [7.0, 4.0, 6.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+        )
+
+    elseif prob_no == 134 || prob_no == "TollSettingP2"
+        return BilevelProblem(
+            "TollSettingP2",
+            [3, 18, 3, 38],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 10.0],
+            [-4.5, 32.0, 2.0],
+            (x, y) -> -[y[1] + y[2], y[3] + y[4], y[5] + y[6]]' * x,
+            (x, y) -> [2*x[1], 2*x[1], 2*x[2], 2*x[2], 2*x[3], 2*x[3], 5, 7, 14, 7, 2, 4, 29, 20, 12, 8, 5, 2]' * y,
+            (x, y) -> -x,
+            (x, y) -> begin
+                rows1 = [fill(1,3); fill(2,3); fill(3,3); fill(4,3); fill(5,3); fill(6,3); fill(7,2); fill(8,2); fill(9,1); fill(10,1)]
+                rows_minus1 = [5; 6; 7; 7; 8; 8; fill(9, 3); fill(10, 3)]
+                cols1 = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 5, 13, 2, 6, 16, 3, 14, 4, 17, 15, 18]
+                cols_minus1 = [7, 10, 1, 8, 2, 11, 3, 5, 9, 4, 6, 12]
+                A = zeros(10, 18)
+                for i in rows1
+                    for j in cols1
+                        A[i, j] = 1.0
+                    end
+                end
+                for i in rows_minus1
+                    for j in cols_minus1
+                        A[i, j] = - 1.0
+                    end
+                end
+                vcat(A * y .+ [fill(-1.0, 4) ; zeros(Float64, 6)], -A * y .+ [fill(-1.0, 4) ; zeros(Float64, 6)], -y)
+            end,
+            [0.5, 4.0, 4.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0]
+        )
+
+    elseif prob_no == 135 || prob_no == "TollSettingP3"
+        return BilevelProblem(
+            "TollSettingP3",
+            [3, 18, 3, 38],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 10.0],
+            [-3.5, 32.0, 2.0],
+            (x, y) -> -[y[1] + 10*y[2], y[3] + 10*y[4], y[5] + 10*y[6]]' * x,
+            (x, y) -> [2*x[1], 20*x[1], 2*x[2], 20*x[2], 2*x[3], 20*x[3], 5, 7, 14, 7, 2, 4, 29, 20, 12, 8, 5, 2]' * y,
+            (x, y) -> -x,
+            (x, y) -> begin
+                rows1 = [fill(1,3); fill(2,3); fill(3,3); fill(4,3); fill(5,3); 6 ; 7 ; 7 ; 8 ; 9 ; 10]
+                rows_minus1 = [5 ; 6 ; 7 ; 7 ; 8 ; 9 ; 9 ; 9 ; 10]
+                rows10 = [6 ; 6 ; 7]
+                rows_minus10 = [8 ; 10 ; 10]
+
+                cols1 = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 5, 13, 16, 3, 14, 17, 15, 18]
+                cols_minus1 = [7, 10, 1, 8, 11, 3, 5, 9, 12]
+                cols10 = [2, 6, 4]
+                cols_minus10 = [2, 4, 6]
+
+                # building matrix A
+                A = zeros(10, 18)
+                for i in rows1
+                    for j in cols1
+                        A[i, j] = 1.0
+                    end
+                end
+                for i in rows_minus1
+                    for j in cols_minus1
+                        A[i, j] = - 1.0
+                    end
+                end
+                for i in rows10
+                    for j in cols10
+                        A[i, j] = 10.0
+                    end
+                end
+                for i in rows_minus10
+                    for j in cols_minus10
+                        A[i, j] = -10.0
+                    end
+                end
+                vcat(A * y .+ [fill(-1.0, 4) ; zeros(Float64, 6)], -A * y .+ [fill(-1.0, 4) ; zeros(Float64, 6)], -y)
+            end,
+            -24.0
+        )
+
+    elseif prob_no == 136 || prob_no == "TollSettingP4"
+        return BilevelProblem(
+            "TollSettingP4",
+            [2, 4, 0, 8],
+            ones(Float64, 6),
+            [-4.0, 14.0, 2.0],
+            (x, y) -> -(y[2] + y[3]) * x[1] - y[3] * x[2],
+            (x, y) -> [8, 3 + 2*x[1], 3 + 2*x[1] + 2*x[2], 6]' * y,
+            (x, y) -> Float64[],
+            (x, y) -> begin
+                A = [1 1 0 0; 0 0 1 1]
+                vcat(A * y .+ [-1; -1], -A * y .+ [1; 1], -y)
+            end,
+            -8.0
+        )
+
+    elseif prob_no == 137 || prob_no == "TollSettingP5"
+        return BilevelProblem(
+            "TollSettingP5",
+            [1, 4, 0, 8],
+            ones(Float64, 5),
+            [-2.5, 14.0, 2.0],
+            (x, y) -> -(y[2] + y[3]) * x[1],
+            (x, y) -> [8, 3 + 2*x[1], 4 + 2*x[1], 6]' * y,
+            (x, y) -> Float64[],
+            (x, y) -> begin
+                A = [1 1 0 0; 0 0 1 1]
+                vcat(A * y .+ [-1; -1], -A * y .+ [1; 1], -y)
+            end,
+            -2.5
+        )
 
     # Special cases that need additional data
-    if prob_no == 138 || prob_no == "OptimalControl"
+    elseif prob_no == 138 || prob_no == "OptimalControl"
         error("OptimalControl requires additional parameters - implement separately")
+
+    ## ---------------- LINEAR BILEVEL PROBLEMS ---------------- ##
+
+
+
     elseif prob_no == 173 || prob_no == "ShehuEtal2019Ex42"
         error("ShehuEtal2019Ex42 requires additional parameters - implement separately")
     else
