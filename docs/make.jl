@@ -1,10 +1,10 @@
 using JSOTemplate
 using Documenter
 
-DocMeta.setdocmeta!(JSOTemplate, :DocTestSetup, :(using JSOTemplate); recursive = true)
+DocMeta.setdocmeta!(BilevelBenchmark, :DocTestSetup, :(using BilevelBenchmark); recursive = true)
 
 makedocs(;
-  modules = [JSOTemplate],
+  modules = [BilevelBenchmark],
   doctest = true,
   linkcheck = false,
   strict = false,

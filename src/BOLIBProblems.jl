@@ -1,6 +1,6 @@
-#using LinearAlgebra
+export BilevelProblem, get_bilevel_problem
 
-#export get_bilevel_problem
+using LinearAlgebra
 
 struct BilevelProblem
     name::String
