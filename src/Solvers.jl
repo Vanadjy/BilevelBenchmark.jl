@@ -1,6 +1,8 @@
 export GridSearch_subsolver, Bilevel_DS
 
-using NOMAD
+using NOMAD, Printf
+
+using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
 
 function GridSearch_subsolver(f,
                               g,
@@ -22,8 +24,8 @@ function GridSearch_subsolver(f,
 
     ybest = similar(l_bounds)
     
-    for y in Grid
-        if g(x, y) > 0 # Infeasible point
+    for y in eachcol(Grid)
+        if (any(>(0), g(x, y))) # Infeasible point
             continue
         else
             fval = f(x, y)
@@ -38,23 +40,24 @@ function GridSearch_subsolver(f,
 end
 
 
-function Bilevel_DS(model::BilevelModel,
+function Bilevel_DS(model::BilevelProblem,
                     subsolver::String,
                     D::Matrix{Float64};
                     Δ0::Float64 = 1.0,
                     γ::Float64 = 1/2,
-                    oppportunistic::Boolean = true,
-                    ordered::Boolean = false,
-                    search::Boolean = false,
-                    orthogonal::Boolean = true,
+                    oppportunistic::Bool = true,
+                    ordered::Bool = false,
+                    search::Bool = false,
+                    orthogonal::Bool = true,
                     max_neval_upper::Int = 1000,
+                    max_neval_upper_cons::Int = 1000,
                     max_neval_lower::Int = 100,
                     tol_upper::Float64 = 1e-6,
                     tol_lower::Float64 = 1e-6,
                     max_time::Float64 = 3600.0,
                     verbose::Bool = true
     )
-    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt"]
+    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "NelderMead"]
     start = time()
     elapsed_time = time() - start
 
@@ -62,14 +65,14 @@ function Bilevel_DS(model::BilevelModel,
     @assert γ < 1 "The parameter γ must be less than 1."
     @assert Δ0 > 0 "The initial step size Δ0 must be positive."
     @assert ordered ≤ oppportunistic "The poll cannot be ordered if we don't apply oppportunistic scheme."
-    @assert size(D, 2) == 2 "Set of poll directions need to be a maximal positive basis"
+    @assert size(D, 2) == 2*model.dim[1] "Set of poll directions need to be a maximal positive basis"
 
     #Initialization
     nx = model.dim[1]
     ny = model.dim[2]
     x0y0 = model.xy0
     xk = x0y0[1:nx]
-    yk = x0y0[nx+1:ny]
+    yk = x0y0[nx+1:nx+ny]
 
     #Define functions relative to the model
     F = model.F_func
@@ -86,13 +89,14 @@ function Bilevel_DS(model::BilevelModel,
     Fbest = Inf
     poll_improvement = false
     neval_upper = 1
+    neval_upper_cons = 1
 
     #Declare historics
-    Neval_upper_hist = zeros(max_neval_upper)
-    F_hist = zeros(max_neval_upper)
-    f_hist = zeros(max_neval_upper)
-    x_hist = zeros(nx, max_neval_upper)
-    y_hist = zeros(ny, max_neval_upper)
+    Neval_upper_hist = zeros(max(max_neval_upper, max_neval_upper_cons))
+    F_hist = zeros(max(max_neval_upper, max_neval_upper_cons))
+    f_hist = zeros(max(max_neval_upper, max_neval_upper_cons))
+    x_hist = zeros(nx, max(max_neval_upper, max_neval_upper_cons))
+    y_hist = zeros(ny, max(max_neval_upper, max_neval_upper_cons))
 
     #Initialize historics
     Neval_upper_hist[1] = neval_upper
@@ -110,14 +114,13 @@ function Bilevel_DS(model::BilevelModel,
 
     k = 1
 
-    while !(neval_upper ≥ max_neval_upper || elapsed_time ≥ max_time)
+    while !(neval_upper ≥ max_neval_upper || neval_upper_cons ≥ max_neval_upper_cons || elapsed_time ≥ max_time)
         
         ## ------------------ Generate Poll directions ------------------ ##
 
         H = zeros(eltype(xk), nx, nx)
         yk_new = similar(yk)
         fk_new = zero(eltype(xk))
-        k += 1
 
         if orthogonal
             # Generate a random vector
@@ -137,35 +140,45 @@ function Bilevel_DS(model::BilevelModel,
                 D[j+nx,j+nx] = -1.0
             end=#
         end
-        d = max(norm(dk, Inf) for dk in eachcol(D)) # Maximum norm of the directions
 
         ## ------------------ Poll step ------------------ ##
         i = 0
         poll_improvement = false
         stop_poll = false
-        while (i < size(D, 2)) && !(stop_poll) && (neval_upper > max_neval_upper)
+        while (i < size(D, 2)) && !(stop_poll) && (neval_upper < max_neval_upper) && (neval_upper_cons < max_neval_upper_cons)
             i += 1
-            t = xk + δk * D[:, i]
 
             # Compute optimal answer of lower level on each poll point
             if subsolver == "GridSearch"
+                t = xk + δk * D[:, i]
                 # Apply Grid Search on the local frame of size Δk
-                yk_new, fk_new = GridSearch_subsolver(f, g, t, [t; yk] .- Δk*ones(eltype(xk), nx+ny), [t; yk] .+ Δk*ones(eltype(xk), nx+ny); num_points = max_neval_lower)
+                yk_new, fk_new = GridSearch_subsolver(f, g, t, yk .- Δk*ones(eltype(xk), ny), yk .+ Δk*ones(eltype(xk), ny); num_points = max_neval_lower)
+            elseif subsolver == "NelderMead"
+                y0 = model.xy0[nx+1:nx+ny]
+                t = xk + δk * D[:, i]
+                f_bb(y, t) = (any(>(0), g(t, y))) ? 1e16 : f(t, y)
+                bb_func = OptimizationFunction(f_bb)
+                prob = OptimizationProblem(bb_func, y0, t)
+                sol = Optimization.solve(prob, Optim.NelderMead())
+                yk_new .= sol.u
+                fk_new = sol.objective
             elseif subsolver == "NOMAD"
                 # Apply NOMAD solver
-                function bb(y)
-                    f = f(t, y)
-                    g = g(t, y)
-                    bb_outputs = [f; g]
+                #=function bb(xy)
+                    fy = f(xy[1:nx], xy[nx+1:nx+ny])
+                    gy = g()
+                    bb_outputs = [fy; gy]
                     success = true
                     count_eval = true
                     return (success, count_eval, bb_outputs)
                 end
+                A_temp = [I zeros(nx, ny)]
                 pb = NomadProblem(
-                    ny,
+                    nx + ny,
                     2,
                     ["OBJ", "EB"],
-                    bb
+                    bb;
+                    A = A_temp, b = t # fixes values of x at t in the blackbox
                 )
 
                 # Always solve the subproblem with NOMAD by starting at the same y0
@@ -175,9 +188,9 @@ function Bilevel_DS(model::BilevelModel,
                 pb.options.eval_queue_sort = "DIR_LAST_SUCCESS" # deactivate use of quadratic ordering
                 pb.options.max_time = max_time # fix maximum execution time
 
-                result = NOMAD.solve(pb, model.x0y0[nx+1:ny])
+                result = NOMAD.solve(pb, [t; model.xy0[nx+1:nx+ny]])
                 yk_new .= result.x_best_feas
-                fk_new = result.bbo_best_feas
+                fk_new = result.bbo_best_feas=#
             #elseif solver == "Ipopt"
             else
                 @error "Subsolver $subsolver is not known or implemented. Rather try one of the subsolvers among $subsolver_avail"
@@ -185,7 +198,9 @@ function Bilevel_DS(model::BilevelModel,
 
             # Check feasibility
             Gk = G(t, yk_new)
-            if Gk > 0
+            neval_upper_cons += 1
+            if (any(>(0), Gk))
+                #@info "Infeasible point : don't call the blackbox"
                 continue # Infeasible point
             end
 
@@ -213,10 +228,6 @@ function Bilevel_DS(model::BilevelModel,
                     continue
                 end
             end
-
-            if (neval_upper > max_neval_upper) # Stop the Poll if uppper budget exceeded in the meantime
-                continue
-            end
         end # end of Poll
         
         if !poll_improvement # Unsuccessful iteration
@@ -228,11 +239,12 @@ function Bilevel_DS(model::BilevelModel,
 
         if verbose > 0
             #! format: off
-            @info @sprintf "%6d %8.2e %8.2e %7.1e %1s %7.1e%" neval_upper F(xk,yk) f(xk,yk) Δk poll_status elapsed_time
+            @info @sprintf "%6d %8.2e %8.2e %7.1e %1s %7.1e" neval_upper Fk fk Δk poll_status elapsed_time
             #! format: on
         end
 
         # Update historics
+        k += 1
         Neval_upper_hist[k] = neval_upper
         F_hist[k] = Fk
         f_hist[k] = fk
@@ -247,4 +259,24 @@ function Bilevel_DS(model::BilevelModel,
                      :yhist => x_hist[1:k]
         )
     return xk, yk, Fbest, Historics
+end
+
+all_probs = collect(139:162)
+issued_probs = [49, 50, 51, 127, 131]
+prob_numbers = filter(x -> !(x in issued_probs), all_probs)
+for k in prob_numbers
+    println(k)
+    model = get_bilevel_problem(k)
+    nx, ny = model.dim[1], model.dim[2]
+    max_budget = 200
+
+    D = hcat(Matrix(1.0I, nx, nx), Matrix(-1.0I, nx, nx))
+    for subsolver in ["GridSearch", "NelderMead"]
+        x, y, Fbest, Historics = Bilevel_DS(model, subsolver, D; max_neval_upper = max_budget, max_neval_lower = 50, verbose = true)
+        @test length(x) == nx
+        @test length(y) == ny
+        @test Historics[:Nhist][end] <= max_budget
+        #x_star, y_star = model.sol[1:nx], model.sol[1+nx:nx+ny]
+        #println(abs(model.F_func(x_star, y_star) - Historics[:Fhist][end]))
+    end
 end

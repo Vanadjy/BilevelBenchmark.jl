@@ -22,22 +22,22 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [2, 2, 5, 6],
             [10.0, 10.0, 20.0, 20.0],
             [5.0, 0.0, 1.0],
-            (x, y) -> 2*x[1] + 2*x[2] - 3*y[1] - 3*y[2] - 60,
-            (x, y) -> (y[1] - x[1] + 20)^2 + (y[2] - x[2] + 20)^2,
+            (x, y) -> 2*x[1] + 2*x[2] - 3*y[1] - 3*y[2] - 60.0,
+            (x, y) -> (y[1] - x[1] + 20.0)^2 + (y[2] - x[2] + 20.0)^2,
             (x, y) -> [
-                x[1] + x[2] + y[1] - 2*y[2] - 40,
-                x[1] - 50,
-                x[2] - 50,
+                x[1] + x[2] + y[1] - 2*y[2] - 40.0,
+                x[1] - 50.0,
+                x[2] - 50.0,
                 -x[1],
                 -x[2]
             ],
             (x, y) -> [
-                2*y[1] - x[1] + 10,
-                2*y[2] - x[2] + 10,
-                -y[1] - 10,
-                -y[2] - 10,
-                y[1] - 20,
-                y[2] - 20
+                2*y[1] - x[1] + 10.0,
+                2*y[2] - x[2] + 10.0,
+                -y[1] - 10.0,
+                -y[2] - 10.0,
+                y[1] - 20.0,
+                y[2] - 20.0
             ],
             [25.0, 30.0, 5.0, 10.0]
         )
@@ -405,7 +405,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             "Colson2002BIPA5",
             [1, 2, 1, 6],
             [1.0, 1.0, 1.0],
-            [2.75 0.57 2],
+            [2.75, 0.57, 2],
             (x, y) -> (x[1] - y[2])^4 + (y[1] - 1)^2 + (y[1] - y[2])^2,
             (x, y) -> 2*x[1] + exp(y[1]) + y[1]^2 + 4*y[1] + 2*y[2]^2 - 6*y[2],
             (x, y) -> [-x[1]],
@@ -848,7 +848,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 -y[1] - y[2] - 1.5,
                 -y[1] + y[2] - 1.5
             ],
-            []
+            Float64[]
         )
 
     elseif prob_no == 41 || prob_no == "KleniatiAdjiman2014Ex3"
@@ -1018,11 +1018,11 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [1.1360, 1.1838, 2.0],
             (x, y) -> begin
                 a = (0.2*y[1] - x[1] + 0.6)/0.055
-                2 - exp(-a^0.4) - 0.8*exp(-((0.15*y[1] + x[1] - 0.4)/0.3)^2)
+                2 - exp(-(a)^0.4) - 0.8*exp(-((0.15*y[1] + x[1] - 0.4)/0.3)^2)
             end,
             (x, y) -> begin
                 a = (1.5*y[1] - x[1])/0.055
-                2 - exp(-a^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
+                2 - exp(-(a)^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
             end,
             (x, y) -> [
                 -x[1],
@@ -1043,7 +1043,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             (x, y) -> (x[1] - 0.5)^2 + (y[1] - 1)^2,
             (x, y) -> begin
                 a = (1.5*y[1] - x[1])/0.055
-                2 - exp(-a^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
+                2 - exp(-(a)^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
             end,
             (x, y) -> [
                 -x[1],
@@ -1063,7 +1063,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [1.12, 0.06, 2.0],
             (x, y) -> begin
                 a = (0.2*y[1] - x[1] + 0.6)/0.055
-                2 - exp(-a^0.4) - 0.8*exp(-((0.15*y[1] + x[1] - 0.4)/0.3)^2)
+                2 - exp(-(a)^0.4) - 0.8*exp(-((0.15*y[1] + x[1] - 0.4)/0.3)^2)
             end,
             (x, y) -> (x[1] - 0.5)^2 + (y[1] - 1)^2,
             (x, y) -> [
@@ -1126,7 +1126,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 12.5*x[1]*(y[1] - 5) - y[2],
                 -5*(y[1] + 4 - x[1])*(y[1] + 8 - x[1]) + y[2]
             ],
-            []
+            Float64[]
         )
 
     elseif prob_no == 54 || prob_no == "LuDebSinha2016f"
@@ -1149,7 +1149,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 -5*(x[1]/20 + 4 - y[1])*(x[1]/20 + 8 - y[1]) + x[2]
             ],
             (x, y) -> Float64[],
-            []
+            Float64[]
         )
 
     elseif prob_no == 55 || prob_no == "MacalHurter1997"
@@ -1625,7 +1625,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [2.0, 0.0, 0.0],
             [-2.0769, -0.5868, 2.0],
             (x, y) -> x[1]^2 - 4*x[1] + sum(y.^2),
-            (x, y) -> y[1]^2 + y[2]^2/2 + y[1]*y[2] + [1 - 3*x[1], 1 + x[1]]*y,
+            (x, y) -> y[1]^2 + y[2]^2/2 + y[1]*y[2] + [1 - 3*x[1], 1 + x[1]]' *y,
             (x, y) -> [-x[1], x[1] - 2],
             (x, y) -> [2*y[1] + y[2] - 2*x[1] - 1, -y[1], -y[2]],
             [0.8438, 0.7657, 0.0]
@@ -1723,7 +1723,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 y[2]*y[4] - x[1]
             ],
             (x, y) -> [
-                [1, 2, 3, 4] * (y.^2) - x[1]^2 - x[3]^2 - x[2] - x[4],
+                [1, 2, 3, 4]' * (y.^2) - x[1]^2 - x[3]^2 - x[2] - x[4],
                 y[2]*y[3] - y[1]*y[4]
             ],
             [0.5135, 0.5050, 0.4882, 0.4929, −0.8346, −0.4104, −0.2106, −0.2887]
@@ -1836,7 +1836,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [1.0, 1.0, 1.0],
             [0.50, -14.53, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
-            (x, y) -> 0.5*sum(y.^2) - [3.0 + 1.333*x[1], x[1]]*y,
+            (x, y) -> 0.5*sum(y.^2) - [3.0 + 1.333*x[1], x[1]]' *y,
             (x, y) -> [-x[1]],
             (x, y) -> [
                 -0.333*y[1] + y[2] - 2,
@@ -1853,7 +1853,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [0.0, 0.0, 0.0],
             [0.50, -4.50, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
-            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 0.0]*y) - [3.0 + 1.333*x[1], x[1]]*y,
+            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 0.0]*y) - [3.0 + 1.333*x[1], x[1]]' *y,
             (x, y) -> [-x[1]],
             (x, y) -> [
                 -0.333*y[1] + y[2] - 2,
@@ -1870,7 +1870,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [0.0, 0.0, 0.0],
             [1.860,  -10.931, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
-            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 1.0 + 0.1*x[1]]*y) - [3.0 + 1.333*x[1], x[1]]*y,
+            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 1.0 + 0.1*x[1]]*y) - [3.0 + 1.333*x[1], x[1]]' *y,
             (x, y) -> [-x[1]],
             (x, y) -> [
                 -0.333*y[1] + y[2] - 2,
@@ -1887,7 +1887,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [0.0, 0.0, 0.0],
             [0.92,  -19.47, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
-            (x, y) -> 0.5*sum(y.^2) - [3.0 + 1.333*x[1], x[1]]*y,
+            (x, y) -> 0.5*sum(y.^2) - [3.0 + 1.333*x[1], x[1]]' *y,
             (x, y) -> [-x[1]],
             (x, y) -> [
                 -0.333*y[1] + y[2] - 2,
@@ -1902,9 +1902,9 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             "Outrata1990Ex2e",
             [1, 2, 1, 4],
             [0.0, 0.0, 0.0],
-            [0.90 -14.94 2.0],
+            [0.90, -14.94, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
-            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 1.0]*y) - [3.0 + 1.333*x[1], x[1]]*y,
+            (x, y) -> 0.5*(y'*[1.0 + x[1] 0.0; 0.0 1.0]*y) - [3.0 + 1.333*x[1], x[1]]' *y,
             (x, y) -> [-x[1]],
             (x, y) -> [
                 -0.333*y[1] + y[2] - 2,
@@ -1919,7 +1919,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             "Outrata1993Ex31",
             [1, 2, 1, 4],
             [0.0, 0.0, 0.0],
-            [3.208  -20.531 2.0],
+            [3.208,  -20.531, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
             (x, y) -> 0.5*(1 + 0.2*x[1])*y[1]^2 + 0.5*(1 + 0.1*x[1])*y[2]^2 - (3 + 1.333*x[1])*y[1] - x[1]*y[2],
             (x, y) -> [-x[1]],
@@ -1936,7 +1936,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             "Outrata1993Ex32",
             [1, 2, 1, 4],
             [0.0, 0.0, 0.0],
-            [1.56 -11.68 2.0],
+            [1.56, -11.68, 2.0],
             (x, y) -> 0.5*sum((y .- [3.0, 4.0]).^2),
             (x, y) -> 0.5*(1 + 0.2*x[1])*y[1]^2 + 0.5*(1 + 0.1*x[1])*y[2]^2 - (3 + 1.333*x[1])*y[1] - x[1]*y[2],
             (x, y) -> [-x[1]],
@@ -2311,7 +2311,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             (x, y) -> -y[1],
             (x, y) -> [-x[1], x[1] - 1],
             (x, y) -> [-y[1], y[1] - 1, -x[1]*y[1], x[1]*y[1]],
-            [] # No optimal solution as problem not closed
+            Float64[] # No optimal solution as problem not closed
         )
 
     elseif prob_no == 125 || prob_no == "DesignCentringP1"
@@ -2358,7 +2358,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         return BilevelProblem(
             "DesignCentringP3",
             [6, 6, 3, 3],
-            [1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
             [NaN, NaN, 0.0],
             (x, y) -> -π*abs(x[3]*x[6] - x[4]*x[5]),
             (x, y) -> y[1] + y[2]^2 - y[3]/4 - y[4] + y[6],
@@ -2369,7 +2369,8 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             ],
             (x, y) -> begin
                 z = [x[1]; x[2]]
-                A = inv([x[3] x[4]; x[5] x[6]] * [x[3] x[5]; x[4] x[6]])
+                A = ([x[3] x[4]; x[5] x[6]] * [x[3] x[5]; x[4] x[6]])
+                A = inv(A)
                 [
                     ([y[1]; y[2]] - z)' * A * ([y[1]; y[2]] - z) - 1,
                     ([y[3]; y[4]] - z)' * A * ([y[3]; y[4]] - z) - 1,
@@ -2406,11 +2407,11 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [300.5, 419.8, 2.0],
             (x, y) -> begin
                 xy = y ./ (1 .+ x)
-                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y + 100*sum(x)
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]]' * y + 100*sum(x)
             end,
             (x, y) -> begin
                 xy = y ./ (1 .+ x) ./ 2
-                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]]' * y
             end,
             (x, y) -> -x .- 1,
             (x, y) -> begin
@@ -2428,11 +2429,11 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             [142.9, 81.95, 2.0],
             (x, y) -> begin
                 xy = y ./ (1 .+ x)
-                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y + sum(x)
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]]' * y + sum(x)
             end,
             (x, y) -> begin
                 xy = y ./ (1 .+ x) ./ 2
-                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]] * y
+                [50 + xy[1], 10*xy[2], 10 + xy[3], 10*xy[4], 50 + xy[5]]' * y
             end,
             (x, y) -> -x .- 1,
             (x, y) -> begin
@@ -2618,8 +2619,8 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     # Special cases that need additional data
-    elseif prob_no == 138 || prob_no == "OptimalControl"
-        error("OptimalControl requires additional parameters - implement separately")
+    #elseif prob_no == 138 || prob_no == "OptimalControl"
+        #error("OptimalControl requires additional parameters - implement separately")
 
     ## ---------------- LINEAR BILEVEL PROBLEMS ---------------- ##
         # ...existing code...
@@ -2963,7 +2964,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 x[1] + y[1] - 15,
                 -y[1]
             ],
-            []
+            Float64[]
         )
 
     elseif prob_no == 157 || prob_no == "MershaDempe2006Ex2"
