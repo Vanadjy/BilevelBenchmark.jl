@@ -1,3 +1,5 @@
+export conv_plot, accuracy, Nap, rap, perf_profile, data_profile, accuracy_profile
+
 function conv_plot(p::Int; logscale = false)
     graph = plot()
     @inbounds for i in 1:3
