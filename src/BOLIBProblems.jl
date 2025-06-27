@@ -103,7 +103,8 @@ function get_bilevel_problem(prob_no::Union{Int,String})
                 x[1] - 0.5*y[1] - 4,
                 x[1] + y[1] - 7,
                 -y[1]
-            ]
+            ],
+            [1.0, 0.0]
         )
 
     # TODO corriger ce probleme
@@ -400,157 +401,130 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 18 || prob_no == "Colson2002BIPA5"
-    return BilevelProblem(
-        "Colson2002BIPA5",
-        [2, 2, 2, 2],
-        [1.0, 1.0, 1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (x[2] - 1)^2 + (y[1] - 1)^2 + (y[2] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2 + (y[2] - x[2])^2,
-        (x, y) -> [
-            x[1] + x[2] + y[1] + y[2] - 6,
-            -x[1]
-        ],
-        (x, y) -> [
-            y[1] + y[2] - 3,
-            -y[1]
-        ]
-    )
-elseif prob_no == 19 || prob_no == "Dempe1992a"
-    return BilevelProblem(
-        "Dempe1992a",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 20 || prob_no == "Dempe1992b"
-    return BilevelProblem(
-        "Dempe1992b",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 21 || prob_no == "DeSilva1978"
-    return BilevelProblem(
-        "DeSilva1978",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 22 || prob_no == "FalkLiu1995"
-    return BilevelProblem(
-        "FalkLiu1995",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 23 || prob_no == "Vogel2012"
-    return BilevelProblem(
-        "Vogel2012",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 24 || prob_no == "Zlobec2001a"
-    return BilevelProblem(
-        "Zlobec2001a",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 25 || prob_no == "Zlobec2001b"
-    return BilevelProblem(
-        "Zlobec2001b",
-        [1, 1, 1, 2],
-        [1.0, 1.0],
-        [0.0, 0.0, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (y[1] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2,
-        (x, y) -> [-x[1]],
-        (x, y) -> [
-            y[1] - 1,
-            -y[1]
-        ]
-    )
-elseif prob_no == 26 || prob_no == "AnEtal2009"
-    return BilevelProblem(
-        "AnEtal2009",
-        [2, 2, 2, 2],
-        [1.0, 1.0, 1.0, 1.0],
-        [2251.55, 565.78, 1.0],
-        (x, y) -> (x[1] - 1)^2 + (x[2] - 1)^2 + (y[1] - 1)^2 + (y[2] - 1)^2,
-        (x, y) -> (y[1] - x[1])^2 + (y[2] - x[2])^2,
-        (x, y) -> [
-            x[1] + x[2] + y[1] + y[2] - 6,
-            -x[1]
-        ],
-        (x, y) -> [
-            y[1] + y[2] - 3,
-            -y[1]
-        ]
-    )
-elseif prob_no == 27 || prob_no == "AllendeStill2013"
-    return BilevelProblem(
-        "AllendeStill2013",
-        [2, 2, 5, 2],
-        [0.0, 0.0, 0.0, 0.0],
-        [1.0, -0.5, 1.0],
-        (x, y) -> (x[1]-1)^2 + (x[2]-1)^2 + y[1]^2 + y[2]^2,
-        (x, y) -> y[1]^2 + y[2]^2 - 2*x[1]*y[1] - 2*x[2]*y[2],
-        (x, y) -> [
-            -x[1],
-            -x[2],
-            x[1]-2,
-            -y[1],
-            -y[2]
-        ],
-        (x, y) -> [
-            (y[1]-1)^2-0.25,
-            (y[2]-1)^2-0.25
-        ]
-    )
+        return BilevelProblem(
+            "Colson2002BIPA5",
+            [1, 2, 1, 6],
+            [1.0, 1.0, 1.0],
+            [2.75 0.57 2],
+            (x, y) -> (x[1] - y[2])^4 + (y[1] - 1)^2 + (y[1] - y[2])^2,
+            (x, y) -> 2*x[1] + exp(y[1]) + y[1]^2 + 4*y[1] + 2*y[2]^2 - 6*y[2],
+            (x, y) -> [-x[1]],
+            (x, y) -> [
+                6*x[1] + y[1]^2 + exp(y[2]) - 15,
+                5*x[1] + y[1]^4 - y[2] - 25,
+                y[1] - 4,
+                y[2] - 2,
+                -y[1],
+                -y[2]
+            ],
+            [1.94, 0.0, 1.21]
+        )
+
+    elseif prob_no == 19 || prob_no == "Dempe1992a"
+        return BilevelProblem(
+            "Dempe1992a",
+            [2, 2, 1, 2],
+            [1.0, 1.0, 1.0, 1.0],
+            [NaN, NaN, 0.0],
+            (x, y) -> y[2],
+            (x, y) -> 0.5*sum((y .- [1.0, 0.0]).^2),
+            (x, y) -> [sum((x .+ [0.0, 1.0]).^2) - 1],
+            (x, y) -> [
+                y[1] + y[2]*x[1] + x[2],
+                y[1]
+            ],
+            [0.0, 0.0, 0.0, −0.5]
+        )
+
+    elseif prob_no == 20 || prob_no == "Dempe1992b"
+        return BilevelProblem(
+            "Dempe1992b",
+            [1, 1, 0, 1],
+            [-1.0, -1.0],
+            [31.25, 4.0, 1.0],
+            (x, y) -> (x[1] - 3.5)^2 + (y[1] + 4)^2,
+            (x, y) -> (y[1] - 3.0)^2,
+            (x, y) -> Float64[],
+            (x, y) -> [y[1]^2 - x[1]],
+            31.25
+        )
+    # ...existing code...
+
+    elseif prob_no == 21 || prob_no == "DempeDutta2012Ex24"
+        return BilevelProblem(
+            "DempeDutta2012Ex24",
+            [1, 1, 0, 1],
+            [1.0, 1.0],
+            [0.0, 0.0, 1.0],
+            (x, y) -> (x[1] - 1)^2 + y[1]^2,
+            (x, y) -> x[1]^2 * y[1],
+            (x, y) -> Float64[],
+            (x, y) -> [y[1]^2],
+            [1.0, 0.0]
+        )
+
+    elseif prob_no == 22 || prob_no == "DempeDutta2012Ex31"
+        return BilevelProblem(
+            "DempeDutta2012Ex31",
+            [2, 2, 4, 2],
+            [1.0, 1.0, 1.0, 1.0],
+            [-1.0, 4.0, 1.0],
+            (x, y) -> -y[2],
+            (x, y) -> sum((y .+ [0.0, 1.0]).^2),
+            (x, y) -> [
+                -x[1],
+                -x[2],
+                y[1]*y[2],
+                -y[1]*y[2]
+            ],
+            (x, y) -> [
+                (y[1] - x[1])^2 + (y[2] - x[1] - 1)^2 - 1,
+                (y[1] + x[2])^2 + (y[2] - x[2] - 1)^2 - 1
+            ],
+            [0.71, 0.71, 0.0, 1.0]
+        )
+
+    elseif prob_no == 23 || prob_no == "DempeEtal2012"
+        return BilevelProblem(
+            "DempeEtal2012",
+            [1, 1, 2, 2],
+            [1.0, 1.0],
+            [-1.0, -1.0, 1.0],
+            (x, y) -> x[1],
+            (x, y) -> x[1]*y[1],
+            (x, y) -> [
+                -1 - x[1],
+                x[1] - 1
+            ],
+            (x, y) -> [
+                -y[1],
+                y[1] - 1
+            ],
+            [-1.0, 1.0]
+        )
+
+    elseif prob_no == 24 || prob_no == "DempeFranke2011Ex41"
+        return BilevelProblem(
+            "DempeFranke2011Ex41",
+            [2, 2, 4, 4],
+            [1.0, 1.0, 1.0, 1.0],
+            [5.0, -2.0, 1.0],
+            (x, y) -> x[1] + y[1]^2 + y[2]^2,
+            (x, y) -> x[1]*y[1] + x[2]*y[2],
+            (x, y) -> [
+                -1 - x[1],
+                -1 + x[1],
+                -1 - x[2],
+                1 + x[2]
+            ],
+            (x, y) -> [
+                -2*y[1] + y[2],
+                y[1] - 2,
+                y[2] - 2,
+                -y[2]
+            ],
+            [0.0, -1.0, 1.0, 2.0]
+        )
 
     elseif prob_no == 25 || prob_no == "DempeFranke2011Ex42"
         return BilevelProblem(
@@ -3028,28 +3002,81 @@ elseif prob_no == 27 || prob_no == "AllendeStill2013"
 
     elseif prob_no == 159 || prob_no == "TuyEtal1994"
         return BilevelProblem(
-        "GumusFloudas2001Ex1",
-        [1, 1, 3, 3],
-        [1.0, 1.0],
-        [2250.0, 197.75, 1.0],
-        (x,y) -> (x[1]-30)^2 + (y[1]-20)^2,
-        (x,y) -> (y[1]-x[1])^2,
-        (x,y) -> [
-            x[1] + y[1] - 50,
-            -x[1] - y[1] + 50,
-            x[1]^2 + y[1]^2 - 100
-        ],
-        (x,y) -> [
-            y[1] - 50,
-            -y[1],
-            x[1]^2 - y[1]^2
-        ]
-    )
-    end
+            "TuyEtal1994",
+            [2, 2, 3, 3],
+            [1.0, 1.0, 1.0, 1.0],
+            [6.0, 0.0, 1.0],
+            (x, y) -> 3*x[1] + 2*x[2] + y[1] + y[2],
+            (x, y) -> 4*y[1] + y[2],
+            (x, y) -> [x[1] + x[2] + y[1] + y[2] - 4, -x[1], -x[2]],
+            (x, y) -> [
+                -3*x[1] - 5*x[2] - 6*y[1] - 2*y[2] + 15,
+                -y[1],
+                -y[2]
+            ],
+            [0.0, 3.0, 0.0, 0.0]
+        )
 
-    # Special cases that need additional data
-    if prob_no == 138 || prob_no == "OptimalControl"
-        error("OptimalControl requires additional parameters - implement separately")
+    elseif prob_no == 160 || prob_no == "TuyEtal2007Ex3"
+        return BilevelProblem(
+            "TuyEtal2007Ex3",
+            [10, 6, 12, 13],
+            ones(Float64, 16),
+            [-467.4613, -11.6194, 2.0],
+            (x, y) -> [12, -1, -12, 13, 0, 2, 0, -5, 6, -11]'*x - [5, 6, 4, 7, 0, 0]'*y,
+            (x, y) -> [3, -2, -3, -3, 1, 6]'*y,
+            (x, y) -> begin
+                A = [2 3 −14 2 9 −2 −1 4 0 −2 ; −1 7 −13 0 15 −2 8 4 −4 7]
+                B = [3 -9 2 8 -1 8; 6 2 -6 -2 -8 4]
+                vcat(-A*x - B*y + [-30; 134], -x)
+            end,
+            (x, y) -> begin
+                C = [5 -7 -4 2 -3 9 -9 1 3 -11; -6 5 3 2 -8 -5 -8 3 -7 -3 ; 6 4 -2 0 2 -3 3 -2 -2 -4 ; -5 -6 0 4 -3 8 -1 0 -2 3 ; −11 11 −4 −5 10 6 −14 7 11 3 ; −9 12 4 10 −2 −8 −5 11 4 −1; -7 2 6 0 11 -1 2 2 1 2]
+                D = [−10 9 6 −4 −6 3; 5 7 −1 −1 6 −4; −10 −5 −6 4 −3 1; 4 3 4 4 −1 −1; 10 7 −7 −7 −2 −7; −2 5 −10 −1 −4 −5; 5 5 6 5 −1 12]
+                vcat(-C*x - D*y + [-83; -92; -168; 96; 133; -89; 192], -y)
+            end,
+            [0, 8.170692, 10, 0, 7.278940, 3.042311, 0, 10, 0.001982, 9.989153, 3.101280, 10, 10, 10, 0, 9.846133]
+        )
+
+    elseif prob_no == 161 || prob_no == "VisweswaranEtal1996"
+        return BilevelProblem(
+            "VisweswaranEtal1996",
+            [1, 1, 1, 5],
+            [1.0, 1.0],
+            [28/9, -60/9, 1.0],
+            (x, y) -> x[1] + y[1],
+            (x, y) -> -5*x[1] - y[1],
+            (x, y) -> [-x[1]],
+            (x, y) -> [
+                -x[1] - 0.5*y[1] + 2,
+                -0.25*x[1] + y[1] - 2,
+                x[1] + 0.5*y[1] - 8,
+                x[1] - 2*y[1] - 2,
+                -y[1]
+            ],
+            [8/9, 20/9]
+        )
+
+    elseif prob_no == 162 || prob_no == "WangJiaoLi2005"
+        return BilevelProblem(
+            "WangJiaoLi2005",
+            [1, 2, 2, 2],
+            [1.0, 1.0, 1.0],
+            [-1000.0, -1.0, 0.0],
+            (x, y) -> -100*x[1] - 1000*y[1],
+            (x, y) -> -y[1] - y[2],
+            (x, y) -> [-x[1], x[1] - 1],
+            (x, y) -> [
+                x[1] + y[1] - y[2] - 1,
+                y[1] + y[2] - 1,
+                -y[1],
+                -y[2]
+            ],
+            -1000.0
+        )
+
+
+
     elseif prob_no == 173 || prob_no == "ShehuEtal2019Ex42"
         error("ShehuEtal2019Ex42 requires additional parameters - implement separately")
     else
