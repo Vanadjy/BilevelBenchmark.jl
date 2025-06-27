@@ -1,3 +1,5 @@
+export GridSearch_subsolver, Bilevel_DS
+
 using NOMAD
 
 function GridSearch_subsolver(f,
@@ -38,9 +40,9 @@ end
 
 function Bilevel_DS(model::BilevelModel,
                     subsolver::String,
-                    Δ0::Float64,
-                    γ::Float64,
                     D::Matrix{Float64};
+                    Δ0::Float64 = 1.0,
+                    γ::Float64 = 1/2,
                     oppportunistic::Boolean = true,
                     ordered::Boolean = false,
                     search::Boolean = false,
