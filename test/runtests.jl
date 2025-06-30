@@ -1,8 +1,7 @@
-using BiObjBenchmark
-using Test
+using BilevelBenchmark
 
+using Test, LinearAlgebra # Basic Julia packages
+using JuMP, BilevelJuMP # JuMP API
+using Ipopt#, HiGHS, MibS_jll # Solvers
 
-
-@testset "BiObjBenchmark.jl" begin
-  # Write your tests here.
-end
+include("BOLIB_test.jl") # Include the test file
