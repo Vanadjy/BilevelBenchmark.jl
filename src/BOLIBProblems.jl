@@ -1011,6 +1011,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 49 || prob_no == "LuDebSinha2016a"
+        @warn "Problem LuDebSinha2016a is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016a",
             [1, 1, 4, 0],
@@ -1022,7 +1023,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             end,
             (x, y) -> begin
                 a = (1.5*y[1] - x[1])/0.055
-                2 - exp(-(a)^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
+                2 - exp((-a)^0.4) - 0.8*exp(-((2*y[1] + x[1] - 3)/0.5)^2)
             end,
             (x, y) -> [
                 -x[1],
@@ -1035,6 +1036,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 50 || prob_no == "LuDebSinha2016b"
+        @warn "Problem LuDebSinha2016b is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016b",
             [1, 1, 4, 0],
@@ -1056,6 +1058,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 51 || prob_no == "LuDebSinha2016c"
+        @warn "Problem LuDebSinha2016c is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016c",
             [1, 1, 4, 0],
@@ -2370,6 +2373,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
             (x, y) -> begin
                 z = [x[1]; x[2]]
                 A = ([x[3] x[4]; x[5] x[6]] * [x[3] x[5]; x[4] x[6]])
+                println(det(A))
                 A = inv(A)
                 [
                     ([y[1]; y[2]] - z)' * A * ([y[1]; y[2]] - z) - 1,
@@ -2619,8 +2623,8 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     # Special cases that need additional data
-    elseif prob_no == 138 || prob_no == "OptimalControl"
-        error("OptimalControl requires additional parameters - implement separately")
+    #elseif prob_no == 138 || prob_no == "OptimalControl"
+        #error("OptimalControl requires additional parameters - implement separately")
 
     ## ---------------- LINEAR BILEVEL PROBLEMS ---------------- ##
         # ...existing code...
