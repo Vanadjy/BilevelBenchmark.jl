@@ -1,4 +1,4 @@
-#module BilevelBenchmark
+module BilevelBenchmark
 
 include("structs.jl")
 include("utils.jl")
@@ -8,4 +8,4 @@ include("Solvers.jl")
 #include("ProfilesBenchmark.jl")
 
 
-#end
+end
