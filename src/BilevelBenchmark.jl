@@ -1,9 +1,11 @@
-module BilevelBenchmark
+#module BilevelBenchmark
 
-# Write your package code here.
+include("structs.jl")
 include("utils.jl")
-#include("profiles.jl")
 include("BOLIBProblems.jl")
 include("Solvers.jl")
+#include("profiles.jl")
+#include("ProfilesBenchmark.jl")
 
-end
+
+#end

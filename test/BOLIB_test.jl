@@ -6,7 +6,7 @@ fail_to_start = [] # List to store problems that Ipopt has not been able to star
 failed_probs = [] # List to store problems that failed the tests
 # DISCLAIMER BilevelJuMP cannot handle lower level objective that is not affine or qudratic, so they are omitted in the tests.
 
-@testset "BiObjBenchmark.jl" begin
+@testset "BOLIB.jl" begin
   for prob_no in prob_numbers
     println(prob_no)
     try

@@ -2,6 +2,8 @@ export GridSearch_subsolver, Bilevel_DS
 
 using NOMAD, Printf
 
+using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
+
 #using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
 
 function GridSearch_subsolver(f,
@@ -55,6 +57,7 @@ function Bilevel_DS(model::BilevelProblem,
                     tol_upper::Float64 = 1e-6,
                     tol_lower::Float64 = 1e-6,
                     max_time::Float64 = 3600.0,
+                    nomad_options::NOMADOptions = NOMADOptions(),
                     verbose::Bool = true
     )
     subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "NelderMead"]
@@ -138,9 +141,8 @@ function Bilevel_DS(model::BilevelProblem,
             Householder!(H, v)
             for j = 1:nx
                 D[:, j] .= round.((Δk/δk*norm(H[:, j], Inf)) * H[:, j])
-                D[:, j + nx] .= (-1.0) * round.((Δk/δk*norm(H[:, j], Inf)) * H[:, j])
+                D[:, j + nx] .= (-1.0) * round.((Δk/(δk*norm(H[:, j], Inf))) * H[:, j])
             end
-            display(D) #TODO: check back OrthoMADS: directions just become bigger and bigger
         else
             #@warn "No other way to build dense directions has been implemented yet."
             for j = 1:nx
@@ -188,16 +190,15 @@ function Bilevel_DS(model::BilevelProblem,
                     pb = NomadProblem(ny, 1, ["OBJ"], bb)
                 end
 
+                pb.options.max_bb_eval = nomad_options.max_bb_eval
+                pb.options.quad_model_search = nomad_options.quad_model_search
+                pb.options.direction_type = nomad_options.direction_type
+                pb.options.eval_queue_sort = nomad_options.eval_queue_sort # deactivate use of quadratic ordering
+                pb.options.max_time = nomad_options.max_time # fix maximum execution time
+                #pb.options.display_stats = nomad_options.display_stats # some display options
+                pb.options.display_degree = nomad_options.display_degree # removing intermediate logs of NOMAD
 
                 # Always solve the subproblem with NOMAD by starting at the same y0
-                pb.options.max_bb_eval = max_neval_lower
-                pb.options.quad_model_search = false # deactivate quadratic model subproblem resolution
-                pb.options.direction_type = "ORTHO N+1 NEG"
-                pb.options.eval_queue_sort = "DIR_LAST_SUCCESS" # deactivate use of quadratic ordering
-                pb.options.max_time = max_time # fix maximum execution time
-                #pb.options.display_stats = ["EVAL", "SOL", "OBJ"] # some display options
-                pb.options.display_degree = 0  # removing intermediate logs of NOMAD
-
                 result = NOMAD.solve(pb, x0y0[nx+1:nx+ny])
                 if result.x_best_feas !== nothing
                     yk_new .= result.x_best_feas
@@ -267,8 +268,8 @@ function Bilevel_DS(model::BilevelProblem,
     Historics = Dict(:Nhist => Neval_upper_hist[1:k],
                      :Fhist => F_hist[1:k],
                      :fhist => f_hist[1:k],
-                     :xhist => x_hist[1:k],
-                     :yhist => x_hist[1:k]
+                     :xhist => x_hist[:, 1:k],
+                     :yhist => x_hist[:, 1:k]
         )
     return xk, yk, Fbest, Historics
 end
