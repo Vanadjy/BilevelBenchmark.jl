@@ -2,7 +2,7 @@ export GridSearch_subsolver, Bilevel_DS
 
 using NOMAD, Printf
 
-using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
+#using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
 
 function GridSearch_subsolver(f,
                               g,
@@ -115,7 +115,14 @@ function Bilevel_DS(model::BilevelProblem,
     k = 1
 
     while !(neval_upper ≥ max_neval_upper || neval_upper_cons ≥ max_neval_upper_cons || elapsed_time ≥ max_time)
-        
+        ## ------------------ Updating Mesh parameter ------------------ ##
+        δk = min(Δk, Δk^2)
+
+        ## ------------------ Poll step ------------------ ##
+        i = 0
+        poll_improvement = false
+        stop_poll = false
+
         ## ------------------ Generate Poll directions ------------------ ##
 
         H = zeros(eltype(xk), nx, nx)
@@ -128,23 +135,19 @@ function Bilevel_DS(model::BilevelProblem,
             v /= norm(v)
 
             # Generate Househodler matrix
-            H = Householder!(H, v)
+            Householder!(H, v)
             for j = 1:nx
                 D[:, j] .= round.((Δk/δk*norm(H[:, j], Inf)) * H[:, j])
                 D[:, j + nx] .= (-1.0) * round.((Δk/δk*norm(H[:, j], Inf)) * H[:, j])
             end
+            display(D) #TODO: check back OrthoMADS: directions just become bigger and bigger
         else
-            @warn "No other way to build dense directions has been implemented yet."
-            #=for j = 1:nx
+            #@warn "No other way to build dense directions has been implemented yet."
+            for j = 1:nx
                 D[j,j] = 1.0
-                D[j+nx,j+nx] = -1.0
-            end=#
+                D[j,j+nx] = -1.0
+            end
         end
-
-        ## ------------------ Poll step ------------------ ##
-        i = 0
-        poll_improvement = false
-        stop_poll = false
         while (i < size(D, 2)) && !(stop_poll) && (neval_upper < max_neval_upper) && (neval_upper_cons < max_neval_upper_cons)
             i += 1
 
@@ -164,22 +167,27 @@ function Bilevel_DS(model::BilevelProblem,
                 fk_new = sol.objective
             elseif subsolver == "NOMAD"
                 # Apply NOMAD solver
-                #=function bb(xy)
-                    fy = f(xy[1:nx], xy[nx+1:nx+ny])
-                    gy = g()
-                    bb_outputs = [fy; gy]
+                t = xk + δk * D[:, i]
+                f = model.f_func
+                function bb(y)
+                    fy = f(t, y)
+                    if model.dim[4] > 0
+                        g = model.g_func
+                        gy = g(t, y) 
+                        bb_outputs = [fy; gy]
+                    else
+                        bb_outputs = [fy]
+                    end
                     success = true
                     count_eval = true
                     return (success, count_eval, bb_outputs)
                 end
-                A_temp = [I zeros(nx, ny)]
-                pb = NomadProblem(
-                    nx + ny,
-                    2,
-                    ["OBJ", "EB"],
-                    bb;
-                    A = A_temp, b = t # fixes values of x at t in the blackbox
-                )
+                if model.dim[4] > 0
+                    pb = NomadProblem(ny, 2, ["OBJ", "PB"], bb)
+                else
+                    pb = NomadProblem(ny, 1, ["OBJ"], bb)
+                end
+
 
                 # Always solve the subproblem with NOMAD by starting at the same y0
                 pb.options.max_bb_eval = max_neval_lower
@@ -187,14 +195,21 @@ function Bilevel_DS(model::BilevelProblem,
                 pb.options.direction_type = "ORTHO N+1 NEG"
                 pb.options.eval_queue_sort = "DIR_LAST_SUCCESS" # deactivate use of quadratic ordering
                 pb.options.max_time = max_time # fix maximum execution time
+                #pb.options.display_stats = ["EVAL", "SOL", "OBJ"] # some display options
+                pb.options.display_degree = 0  # removing intermediate logs of NOMAD
 
-                result = NOMAD.solve(pb, [t; model.xy0[nx+1:nx+ny]])
-                yk_new .= result.x_best_feas
-                fk_new = result.bbo_best_feas=#
+                result = NOMAD.solve(pb, x0y0[nx+1:nx+ny])
+                if result.x_best_feas !== nothing
+                    yk_new .= result.x_best_feas
+                    fk_new = result.bbo_best_feas[1]
+                end
             #elseif solver == "Ipopt"
             else
                 @error "Subsolver $subsolver is not known or implemented. Rather try one of the subsolvers among $subsolver_avail"
             end
+
+            neval_upper += 1
+            Fk_new = F(t, yk_new)
 
             # Check feasibility
             Gk = G(t, yk_new)
@@ -203,9 +218,6 @@ function Bilevel_DS(model::BilevelProblem,
                 #@info "Infeasible point : don't call the blackbox"
                 continue # Infeasible point
             end
-
-            Fk_new = F(t, yk_new)
-            neval_upper += 1
             if (Fk_new < Fk) # Successful iteration
                 poll_improvement = true
                 xk .= t
@@ -259,22 +271,4 @@ function Bilevel_DS(model::BilevelProblem,
                      :yhist => x_hist[1:k]
         )
     return xk, yk, Fbest, Historics
-end
-
-prob_numbers = [127, 131]
-for k in prob_numbers
-    println(k)
-    model = get_bilevel_problem(k)
-    nx, ny = model.dim[1], model.dim[2]
-    max_budget = 200
-
-    D = hcat(Matrix(1.0I, nx, nx), Matrix(-1.0I, nx, nx))
-    for subsolver in ["GridSearch", "NelderMead"]
-        x, y, Fbest, Historics = Bilevel_DS(model, subsolver, D; max_neval_upper = max_budget, max_neval_lower = 50, verbose = true)
-        @test length(x) == nx
-        @test length(y) == ny
-        @test Historics[:Nhist][end] <= max_budget
-        #x_star, y_star = model.sol[1:nx], model.sol[1+nx:nx+ny]
-        #println(abs(model.F_func(x_star, y_star) - Historics[:Fhist][end]))
-    end
 end
