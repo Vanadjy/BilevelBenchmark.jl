@@ -1,6 +1,8 @@
-export conv_plot, accuracy, Nap, rap, perf_profile, data_profile, accuracy_profile
+export conv_plot, accuracy, Nap, rap, perf_profile, data_profile#, accuracy_profile
 
-function conv_plot(p::Int; logscale = false)
+using LaTeXStrings, Plots
+
+#=function conv_plot(p::Int; logscale = false)
     graph = plot()
     @inbounds for i in 1:3
         if logscale
@@ -15,80 +17,98 @@ function conv_plot(p::Int; logscale = false)
         title!("convergence plot for problem $p")
     end
     display(graph)
+end=#
+
+function f_star(f_hists, prob::Int)
+    obj_hists = f_hists[prob]
+    algos = collect(keys(obj_hists))
+    n_algos = length(algos)
+
+    @assert n_algos > 1 "Trying to compare only one algorithm for performace/data profiles"
+
+    best_val = obj_hists[algos[1]][end]
+    for a in 2:n_algos
+        if best_val > obj_hists[algos[a]][end]
+            best_val = obj_hists[algos[a]][end]
+        end
+    end
+    return best_val
 end
 
-accuracy(f, k::Int, p::Int, a::Int) = ((f[a](p)[k] - f[a](p)[1])/(f_star(p) - f[a](p)[1]))
+accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}) = ((f_hists[prob][algo][k] - f_hists[prob][algo][1])/(f_star(f_hists, prob) - f_hists[prob][algo][1]))
 
-function Nap(f, N, a::Int, p::Int, τ::Real)
-    Nap = 10^16
+function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real)
+    Nap = Inf
     Tap = false
     i = 1
-    while !(Tap || i >= length(N[1]))
-        i +=1
-        if accuracy(f, i, p, a) ≥ 1 - τ
-            Nap = N[a][i]
+    while !(Tap || i >= length(N_hists[prob][algo]))
+        i += 1
+        if accuracy(f_hists, i, prob, algo) ≥ 1 - τ
+            Nap = N_hists[prob][algo][i]
             Tap = true
         end
     end
-    return (Int(Nap), Tap)
+    return Nap, Tap
 end
 
-function rap(f, N, a::Int, p::Int, τ::Real)
-    tuple = Nap(f, N, a, p, τ)
-    min_Nap = tuple[1]
-    Tap = tuple[2]
-    rap = 1e10
-    if Tap
-        @inbounds for algo in 1:3
-            tuple_algo = Nap(f, N, algo, p, τ)
-            if tuple_algo[2] && (tuple_algo[1] < min_Nap)
-                min_Nap = tuple_algo[1]
+function rap(f_hists, N_hists, algo::Union{Int, String}, prob::Union{Int, String}, τ::Real)
+    Nap_ref, Tap_ref = Nap(f_hists, N_hists, algo, prob, τ)
+    champ_Nap = Nap_ref
+    rap = Inf
+    if Tap_ref
+        all_algos = collect(keys(f_hists[prob]))
+        for alg in all_algos
+            Nap_algo, Tap_algo = Nap(f_hists, N_hists, alg, prob, τ)
+            if Tap_algo && (Nap_algo < champ_Nap)
+                champ_Nap = Nap_algo
             end
         end
-        rap = tuple[1] / min_Nap
+        rap = Nap_ref / champ_Nap
     end
     return rap
 end
 
-function perf_profile(αs, a::Int, τ::Real)
+function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real)
     count = 0
-    y = []
-    @inbounds for α in αs
-        @inbounds for p in P
-            if (rap(f, N, a, p, τ) ≤ α)
+    @inbounds for l in eachindex(αs)
+        α = αs[l]
+        @inbounds for prob in eachindex(prob_list)
+            if (rap(f_hist, N_hist, algo, prob, τ) ≤ α)
                 count += 1
             end
         end
-        ρ = count / (card_P)
-        push!(y, ρ)
+        ρ = count / (length(prob_list))
+        y[l] = ρ
         count = 0
     end
-    plot!(αs, y, linetype=:steppre, label = "Algorithm $a")
+    #=plot!(αs, y, linetype=:steppre, label = "Algorithm $algo")
     xlabel!("Ratio of number of evaluations")
-    ylabel!("Proportion of τ-solved problems")
+    ylabel!("Proportion of τ-solved problems")=#
 end
 
-function data_profile(ks, a::Int, τ::Real)
+function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real)
     count = 0
-    y = []
-    @inbounds for k in ks
-        @inbounds for p in P
-            tuple = Nap(f, N, a, p, τ)
-            Nap_data, Tap_data = tuple[1], tuple[2]
-            if Nap_data ≤ k * (p + 11) * Tap_data
+    @inbounds for l in eachindex(ks)
+        k = ks[l]
+        @inbounds for prob in eachindex(prob_list)
+            Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ)
+            model = get_bilevel_problem(prob_list[prob])
+            dimprob = model.dim[1] + model.dim[2]
+            if Nap_data ≤ k * (dimprob + 1) * Tap_data
                 count += 1
             end
         end
-        dk = count / (card_P)
-        push!(y, dk)
+        dk = count / (length(prob_list))
+        y[l] = dk
         count = 0
     end
-    plot!(ks, y, linetype=:steppre, label = "Algorithm $a")
+    return y
+    #=plot!(ks, y, linetype=:steppre, label = "Algorithm $a")
     xlabel!("Groups of (p+11) evaluations")
-    ylabel!("Proportion of τ-solved problems")
+    ylabel!("Proportion of τ-solved problems")=#
 end
 
-function accuracy_profile(ds, a::Int)
+#=function accuracy_profile(ds, a::Int)
     count = 0
     y = []
     k = length(N[a])
@@ -106,36 +126,4 @@ function accuracy_profile(ds, a::Int)
     plot!(ds, y, linetype=:steppre, label = "Algorithm $a")
     ylabel!(L"Ratio of $f_{acc}^{N_{a,p}^{tot}}$ with more than d decimals")
     xlabel!("Number of decimals d")
-end
-
-
-for p in [1, 10]
-    conv_plot(p; logscale = true) #on remarque que f(x*) = 0.0
-end
-x = collect(1:20)
-
-for τ in [1e-1, 1e-2]
-    local graph = plot()
-    for algo in 1:3
-        title!("Performance profile for τ = $τ")
-        perf_profile(x, algo, τ)
-    end
-    display(graph)
-end
-
-for τ in [1e-1, 1e-2]
-    local graph = plot()
-    for algo in 1:3
-        title!("Data profile for τ = $τ")
-        data_profile(x, algo, τ)
-    end
-    display(graph)
-end
-
-graph = plot()
-d = collect(0:0.5:8)
-for algo in 1:3
-    title!("Accuracy profile")
-    accuracy_profile(d, algo)
-end
-display(graph)
+end=#
