@@ -1,4 +1,4 @@
-export conv_plot, accuracy, Nap, rap, perf_profile, data_profile#, accuracy_profile
+export conv_plot, accuracy, Nap, rap, perf_profile!, data_profile!#, accuracy_profile
 
 using LaTeXStrings, Plots
 

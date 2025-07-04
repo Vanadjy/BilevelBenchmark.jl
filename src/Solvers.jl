@@ -4,8 +4,6 @@ using NOMAD, Printf
 
 using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
 
-#using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
-
 function GridSearch_subsolver(f,
                               g,
                               x::Vector{Float64},
@@ -175,7 +173,7 @@ function Bilevel_DS(model::BilevelProblem,
                     fy = f(t, y)
                     if model.dim[4] > 0
                         g = model.g_func
-                        gy = g(t, y) 
+                        gy = g(t, y)
                         bb_outputs = [fy; gy]
                     else
                         bb_outputs = [fy]
@@ -185,7 +183,7 @@ function Bilevel_DS(model::BilevelProblem,
                     return (success, count_eval, bb_outputs)
                 end
                 if model.dim[4] > 0
-                    pb = NomadProblem(ny, 2, ["OBJ", "PB"], bb)
+                    pb = NomadProblem(ny, 2, ["OBJ", nomad_options.cons_handle], bb)
                 else
                     pb = NomadProblem(ny, 1, ["OBJ"], bb)
                 end
