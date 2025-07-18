@@ -16,24 +16,26 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
 
             # For legend display
             for i in eachindex(algo_names)
-                legend_perf_prof = PGFPlots.Plots.Linear(1:2, [y_perf[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                legend_perf_prof = PGFPlots.Plots.Linear(αs[1:2], [y_perf[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
                 push!(perf_prof_plots, legend_perf_prof)
 
-                legend_data_prof = PGFPlots.Plots.Linear(1:2, [y_data[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                legend_data_prof = PGFPlots.Plots.Linear(ks[1:2], [y_data[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
                 push!(data_prof_plots, legend_data_prof)
             end
 
 
             for i in eachindex(algo_names)
                 perf_profile_data = PGFPlots.Plots.Linear(αs, y_perf[:, i], style="$(line_color[i]), const plot, solid", mark = "none")
-                perf_profile_markers = PGFPlots.Plots.Scatter(scatter_log, y_perf[:, i][scatter_log], style="$(line_color[i]), const plot", mark = "$(marks[i])")
+                marker_indexes = findall(x -> x in scatter_log, αs)
+                perf_profile_markers = PGFPlots.Plots.Scatter(scatter_log, y_perf[:, i][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
 
                 push!(perf_prof_plots, perf_profile_data, perf_profile_markers)
             end
 
             for i in eachindex(algo_names)
                 data_profile_data = PGFPlots.Plots.Linear(ks, y_data[:, i], style="$(line_color[i]), const plot, solid", mark = "none")
-                data_profile_markers = PGFPlots.Plots.Scatter(scatter_log, y_data[:, i][scatter_log], style="$(line_color[i]), const plot", mark = "$(marks[i])")
+                marker_indexes = findall(x -> x in scatter_log, ks)
+                data_profile_markers = PGFPlots.Plots.Scatter(scatter_log, y_data[:, i][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
 
                 push!(data_prof_plots, data_profile_data, data_profile_markers)
             end
@@ -44,7 +46,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmode = "log",
                 ylabel = "Porportion of problem solved",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east"
+                legendPos= "south east",
+                #ymin = 0.0,
+                #ymax = 1.0
             )
 
             plt_data = PGFPlots.Axis(
@@ -53,7 +57,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmode="log",
                 ylabel = "Porportion of problem solved",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east"
+                legendPos= "south east",
+                #ymin = 0.0,
+                #ymax = 1.0
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
             PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-logscale-$type_of_ref.tikz", plt_perf)
@@ -76,7 +82,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xlabel = "Ratio of function evaluation \$ \\alpha \$",
                 ylabel = "Porportion of problem solved",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east"
+                legendPos= "south east",
+                #ymin = 0.0,
+                #ymax = 1.0
             )
 
             plt_data = PGFPlots.Axis(
@@ -84,7 +92,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xlabel = "Groups of \$ n_p + 1\$ evaluations \$k\$",
                 ylabel = "Porportion of problem solved",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east"
+                legendPos= "south east",
+                #ymin = 0.0,
+                #ymax = 1.0
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
             PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-$type_of_ref.tikz", plt_perf)

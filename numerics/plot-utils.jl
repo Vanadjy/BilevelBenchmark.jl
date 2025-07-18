@@ -21,9 +21,14 @@ function Nap_Matrix(f_hists, N_hists, algo_names::Vector{String}, all_probs::Vec
     return NapMatrix
 end
 
-function DataMatrix(F_all_hist, N_all_hist)
-    Data = zeros(eltype(F_all_hist[1]["Algo1"][1]), )
-
+function DataMatrix(F_all_hist, N_all_hist, algo_names::Vector{String})
+    Data = Inf .* ones(eltype(F_all_hist[1]["Algo1"][1]), Int(N_all_hist[1]["Algo1"][end]), length(F_all_hist), length(keys(F_all_hists[1])))
+    for p in eachindex(F_all_hist)
+        for a in 1:length(keys(F_all_hists[1]))
+            Data[Int.(N_all_hist[p][algo_names[a]]), p, a] .= F_all_hist[p][algo_names[a]]
+        end
+    end
+    return Data
 end
 
 function ScaleDataDim(all_probs::Vector{Int})

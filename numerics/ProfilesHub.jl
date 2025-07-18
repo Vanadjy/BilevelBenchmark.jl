@@ -23,6 +23,7 @@ generate_files = false
 draw_profiles = false
 referee_please = false
 typeof_referee = "All_Final"
+generate_F_adjusted = false
 draw_profiles_adjusted = false
 confirm_profiles = true
 
@@ -41,25 +42,27 @@ x_all_hists = load_object("x_all_hists-cons=$cons_handle.jld2")
 y_all_hists = load_object("y_all_hists-cons=$cons_handle.jld2")
 cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
-αs = collect(1:100)
-ks = collect(1:100)
+αs = collect(1:0.1:100)
+ks = collect(1:0.1:100)
 y_perf = zeros(Float64, length(αs), length(algo_names))
 y_data = zeros(Float64, length(ks), length(algo_names))
 
 if confirm_profiles
     for τ in [1e-1, 1e-2]
         NapMatrix = Nap_Matrix(F_all_hists, N_all_hists, algo_names, prob_numbers, τ)
-        perf_prof = performance_profile(PlotsBackend(), NapMatrix, algo_names, title="Performance Profile τ = $(τ*100)%")
-        NpVector = ScaleDataDim(prob_numbers)
-        data_prof = data_profile(PlotsBackend(), NapMatrix, NpVector, algo_names, title="Data Profile τ = $(τ*100)%")
+        perf_prof = performance_profile(PlotsBackend(), NapMatrix, algo_names, title="Performance Profile τ = $(τ*100)%"; ylims=(0.35,0.45))
+        #Data = DataMatrix(F_all_hists, N_all_hists, algo_names)
+        #NpVector = ScaleDataDim(prob_numbers)
+        #display(Data)
+        #data_prof = data_profile(PlotsBackend(), Data, NpVector, algo_names, title="Data Profile τ = $(τ*100)%"; τ = τ)
 
         display(perf_prof)
-        display(data_prof)
+        #display(data_prof)
     end
 end
 
 if draw_profiles
-    draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling)
+    draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = "")
 end
 
 if referee_please
@@ -94,6 +97,21 @@ if referee_please
                     F_all_hists_adjusted[prob_index][1][algo] .= fill(Inf, length(F_all_hists[prob_index][1][algo]))
                 end
             end
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = typeof_referee)
+        end
+    elseif typeof_referee == "All_All"
+        F_all_hists_adjusted = copy(F_all_hists)
+        if generate_F_adjusted
+            Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
+            cd(path_jld2)
+            JLD2.save_object("F_all_hists_adjusted-cons=$cons_handle-$typeof_referee.jld2", F_all_hists_adjusted)
+            cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+        end
+        cd(path_jld2)
+        F_all_hists_adjusted = JLD2.load_object("F_all_hists_adjusted-cons=$cons_handle-$typeof_referee.jld2")
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+
+        if draw_profiles_adjusted
             draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = typeof_referee)
         end
     end

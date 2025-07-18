@@ -35,7 +35,23 @@ function f_star(f_hists, prob::Int)
     return best_val
 end
 
-accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}) = ((f_hists[prob][algo][k] - f_hists[prob][algo][1])/(f_star(f_hists, prob) - f_hists[prob][algo][1]))
+function f_0(f_hists, prob::Int, algo::Union{Int, String})
+    obj_hists = f_hists[prob][algo]
+    f0 = Inf
+    if !isinf(obj_hists[1])
+        f0 = obj_hists[1]
+    else
+        i = 1
+        while i <= length(obj_hists[1]) && isinf(f0)
+            i += 1
+            if !isinf(obj_hists[i])
+                f0 = obj_hists[i]
+            end
+        end
+    end
+    return f0
+end
+accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}) = ((f_hists[prob][algo][k] - f_0(f_hists, prob, algo))/(f_star(f_hists, prob) - f_0(f_hists, prob, algo)))
 
 function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real)
     Nap = Inf
