@@ -20,12 +20,12 @@ cons_handle = "PB"
 log_scaling = true
 
 generate_files = false
-draw_profiles = false
+draw_profiles = true
 referee_please = false
 typeof_referee = "All_Final"
 generate_F_adjusted = false
 draw_profiles_adjusted = false
-confirm_profiles = true
+confirm_profiles = false
 
 @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
 path_jld2 = "/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/JLD2saves"
@@ -42,15 +42,15 @@ x_all_hists = load_object("x_all_hists-cons=$cons_handle.jld2")
 y_all_hists = load_object("y_all_hists-cons=$cons_handle.jld2")
 cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
-αs = collect(1:0.1:100)
-ks = collect(1:0.1:100)
+αs = collect(1:0.1:1000)
+ks = collect(1:0.1:1000)
 y_perf = zeros(Float64, length(αs), length(algo_names))
 y_data = zeros(Float64, length(ks), length(algo_names))
 
 if confirm_profiles
     for τ in [1e-1, 1e-2]
         NapMatrix = Nap_Matrix(F_all_hists, N_all_hists, algo_names, prob_numbers, τ)
-        perf_prof = performance_profile(PlotsBackend(), NapMatrix, algo_names, title="Performance Profile τ = $(τ*100)%"; ylims=(0.35,0.45))
+        perf_prof = performance_profile(PlotsBackend(), NapMatrix, algo_names, title="Performance Profile τ = $(τ*100)%";) #ylims=(0.35,0.45))
         #Data = DataMatrix(F_all_hists, N_all_hists, algo_names)
         #NpVector = ScaleDataDim(prob_numbers)
         #display(Data)
