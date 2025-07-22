@@ -13,8 +13,7 @@ include("Referee_adjust.jl")
 
 all_probs = collect(1:173)
 issued_probs = [36, 49, 50, 51, 138, 127, 131, 173]
-#prob_numbers = filter(x -> !(x in issued_probs), all_probs)
-prob_numbers = collect(1:10)
+prob_numbers = filter(x -> !(x in issued_probs), all_probs)
 conv_problems = [59, 82, 124]
 
 algo_names = ["Algo1", "Algo2", "Algo3"]
@@ -22,20 +21,21 @@ cons_handle = "PB"
 log_scaling = true
 starter = "yk-1" # "y0" or "yk-1"
 
-generate_files = false
-draw_conv = true
-draw_profiles = false
-referee_please = true
-typeof_referee = "All_All"
-generate_F_adjusted = false
-draw_conv_adjusted = true
-draw_profiles_adjusted = false
-confirm_profiles = false
+hub_options = HubOPtions(
+    generate_files = true,
+    draw_conv = false,
+    draw_profiles = false,
+    referee_please = false,
+    typeof_referee = "All_All",
+    generate_F_adjusted = false,
+    draw_conv_adjusted = false,
+    draw_profiles_adjusted = false,
+    confirm_profiles = false
+)
 
-@assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
-path_jld2 = "/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/JLD2saves"
+path_jld2 = "~"
 
-if generate_files
+if hub_options.generate_files
     generate_files!(prob_numbers, algo_names; cons_handle = cons_handle, path = path_jld2, start_point = starter)
 end
 
@@ -52,7 +52,7 @@ ks = collect(1:0.1:100)
 y_perf = zeros(Float64, length(αs), length(algo_names))
 y_data = zeros(Float64, length(ks), length(algo_names))
 
-if confirm_profiles
+if hub_options.confirm_profiles
     for τ in [1e-1, 1e-2]
         NapMatrix = Nap_Matrix(F_all_hists, N_all_hists, algo_names, prob_numbers, τ)
         perf_prof = performance_profile(PlotsBackend(), NapMatrix, algo_names, title="Performance Profile τ = $(τ*100)%";) #ylims=(0.35,0.45))
@@ -61,23 +61,23 @@ if confirm_profiles
     end
 end
 
-if draw_conv
+if hub_options.draw_conv
     for p in conv_problems
         draw_convergence!(F_all_hists, N_all_hists, p, algo_names; logscale = log_scaling, type_of_ref = "", cons_handle = cons_handle)
     end
 end
 
-if draw_profiles
+if hub_options.draw_profiles
     draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = "", start_point = starter)
 end
 
-if referee_please
-    if typeof_referee == "Single_Final"
+if hub_options.referee_please
+    if hub_options.typeof_referee == "Single_Final"
         referee_name = "NOMAD"
         algo_blames = Referee_adjust(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referee_name)
         F_all_hists_adjusted = copy(F_all_hists)
 
-        if draw_profiles_adjusted
+        if hub_options.draw_profiles_adjusted
             # Change F historics for the accuracy computation
             for algo in algo_names
                 for issued_prob in algo_blames[algo]
@@ -89,11 +89,11 @@ if referee_please
             end
             draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, start_point = starter)
         end
-    elseif typeof_referee == "All_Final"
+    elseif hub_options.typeof_referee == "All_Final"
         algo_blames = Referee_all_adjust(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
         F_all_hists_adjusted = copy(F_all_hists)
 
-        if draw_profiles_adjusted
+        if hub_options.draw_profiles_adjusted
             # Change F historics for the accuracy computation
             for algo in algo_names
                 for issued_prob in algo_blames[algo]
@@ -105,9 +105,9 @@ if referee_please
             end
             draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = typeof_referee, start_point = starter)
         end
-    elseif typeof_referee == "All_All"
+    elseif hub_options.typeof_referee == "All_All"
         F_all_hists_adjusted = copy(F_all_hists)
-        if generate_F_adjusted
+        if hub_options.generate_F_adjusted
             Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
             cd(path_jld2)
             JLD2.save_object("F_all_hists_adjusted-cons=$cons_handle-$typeof_referee.jld2", F_all_hists_adjusted)
@@ -117,10 +117,10 @@ if referee_please
         F_all_hists_adjusted = JLD2.load_object("F_all_hists_adjusted-cons=$cons_handle-$typeof_referee.jld2")
         cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
-        if draw_profiles_adjusted
+        if hub_options.draw_profiles_adjusted
             draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = typeof_referee, start_point = starter)
         end
-        if draw_conv_adjusted
+        if hub_options.draw_conv_adjusted
             for p in conv_problems
                 draw_convergence!(F_all_hists_adjusted, N_all_hists, p, algo_names; logscale = log_scaling, type_of_ref = "adjusted", cons_handle = cons_handle, adjusted = draw_conv_adjusted, start_point = starter)
             end

@@ -21,6 +21,7 @@ mutable struct NOMADOptions{R, I}
     display_stats::Vector{String}
     display_degree::I
     cons_handle::String
+    start_points::String
 
     function NOMADOptions{R, I}(;
         max_bb_eval::I                = 1000,

@@ -1,3 +1,48 @@
+mutable struct HubOPtions{B, S}
+    generate_files::B
+    draw_conv::B
+    draw_profiles::B
+    referee_please::B
+    typeof_referee::S
+    generate_F_adjusted::B
+    draw_conv_adjusted::B
+    draw_profiles_adjusted::B
+    confirm_profiles::B
+
+    function HubOPtions{B, S}(;
+                    generate_files::B = true,
+                    draw_conv::B = true,
+                    draw_profiles::B = false,
+                    referee_please::B = false,
+                    typeof_referee::S = "All_All",
+                    generate_F_adjusted::B = false,
+                    draw_conv_adjusted::B = false,
+                    draw_profiles_adjusted::B = false,
+                    confirm_profiles::B = false
+        ) where {B <: Bool, S <: String}
+
+        @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
+        @assert generate_F_adjusted <= referee_please "Cannot generate F adjusted if no referee."
+        @assert draw_conv_adjusted <= referee_please "Cannot draw adjusted convergence plot if no referee."
+        @assert typeof_referee ∈ ["All_All", "All_Final", "Single_Final"] "Invalid type of referee. Must be one of: All_All, All_Final, Single_Final."
+        typeof_referee = (referee_please ? typeof_referee : "")
+
+        return new{B, S}(
+                generate_files,
+                draw_conv,
+                draw_profiles,
+                referee_please,
+                typeof_referee,
+                generate_F_adjusted,
+                draw_conv_adjusted,
+                draw_profiles_adjusted,
+                confirm_profiles
+        )
+    end
+end
+
+HubOPtions(args...; kwargs...) = HubOPtions{Bool, String}(args...; kwargs...)
+
 function log_scale(n)
   try
     Int(log10(n))

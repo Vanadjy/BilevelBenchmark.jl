@@ -7,8 +7,8 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}; max_b
     ## Initialize solver options ##
     n_algos = length(algo_names)
     options1 = NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle, start_points = start_point) # Basic options : ORTHO 2N and no search
-    options2 = NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle, satrt_point = start_point) # ORTHO N+1 NEG and no search
-    options3 = NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle, start_point = start_point) # ORTHO 2N and quadratic search
+    options2 = NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle, start_points = start_point) # ORTHO N+1 NEG and no search
+    options3 = NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle, start_points = start_point) # ORTHO 2N and quadratic search
     All_options = Dict(algo_names .=> [options1, options2, options3])
 
     # Instantiate historic storages ##
