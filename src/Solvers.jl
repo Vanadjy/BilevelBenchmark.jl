@@ -197,11 +197,20 @@ function Bilevel_DS(model::BilevelProblem,
                 pb.options.display_degree = nomad_options.display_degree # removing intermediate logs of NOMAD
 
                 # Always solve the subproblem with NOMAD by starting at the same y0
-                result = NOMAD.solve(pb, x0y0[nx+1:nx+ny])
+                if nomad_options.start_points == "y0"
+                    result = NOMAD.solve(pb, x0y0[nx+1:nx+ny])
+                elseif nomad_options.start_points == "yk-1"
+                    result = NOMAD.solve(pb, yk)
+                else
+                    @error "Start points must be either 'y0' or 'yk-1'. Other start points are not supported yet."
+                end
+                
                 if result.x_best_feas !== nothing
                     yk_new .= result.x_best_feas
                     fk_new = result.bbo_best_feas[1]
                 end
+            elseif subsolver == "NOMAD-yk-1"
+
             #elseif solver == "Ipopt"
             else
                 @error "Subsolver $subsolver is not known or implemented. Rather try one of the subsolvers among $subsolver_avail"

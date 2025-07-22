@@ -1,6 +1,85 @@
 using PGFPlots
 
-function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; adjusted::Bool = false, cons_handle = "PB", log_scaling::Bool = true, type_of_ref::String = "All_Final")
+function draw_convergence!(F_all_hists, N_all_hists, prob::Int, algo_names; logscale::Bool = false, max_budget::Int = 1000, type_of_ref::String = "All_Final", adjusted::Bool = false, cons_handle = "PB", start_point::String = "y0")
+    F_hist = F_all_hists[prob]
+    N_hist = N_all_hists[prob]
+    @assert N_hist[algo_names[1]][end] ≤ max_budget "The last value of N_hist exceeds the max budget."
+    conv_plot = Union{PGFPlots.Plots.Linear, PGFPlots.Plots.Scatter}[]
+
+    xlim_conv = 0
+    for i in eachindex(algo_names)
+        # Fixes xlim for plots
+        x_ind_conv = findfirst(F_hist[algo_names[i]] .≤ minimum(F_hist[algo_names[i]]))
+        if x_ind_conv > xlim_conv # Aims for giving to xlim the largest value so that the plot is not cut too early
+            xlim_conv = min(x_ind_conv + 2 * Int(N_hist[algo_names[i]][end] / 10), length(N_hist[algo_names[i]]))
+        end
+
+        # Filters F historic if referee
+        if adjusted
+            filter_indexes = findall(x -> !isinf(x), F_hist[algo_names[i]])
+            F_hist[algo_names[i]] = F_hist[algo_names[i]][filter_indexes]
+            N_hist[algo_names[i]] = N_hist[algo_names[i]][filter_indexes]
+        end
+    end
+
+    if logscale
+        scatter_log = log_scale(max_budget)
+        for i in eachindex(algo_names)
+            # For legend display
+            if !isempty(F_hist[algo_names[i]])
+                legend_conv_plot = PGFPlots.Plots.Linear(N_hist[algo_names[i]][1:2], F_hist[algo_names[i]][1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                push!(conv_plot, legend_conv_plot)
+            else
+                @warn "No convergence data for algorithm $(algo_names[i]) on problem $(prob). Skipping legend entry."
+            end
+        end
+
+        for i in eachindex(algo_names)
+            if !isempty(F_hist[algo_names[i]])
+                # Plot the convergence data
+                filtered_Ns_log = filter(x -> x < N_hist[algo_names[i]][end], scatter_log)
+                marker_indexes = findall(x -> x in filtered_Ns_log, N_hist[algo_names[i]])
+                
+                conv_plot_data = PGFPlots.Plots.Linear(N_hist[algo_names[i]], F_hist[algo_names[i]], style="$(line_color[i]), const plot, solid", mark = "none")
+                conv_plot_markers = PGFPlots.Plots.Scatter(intersect(filtered_Ns_log, N_hist[algo_names[i]][marker_indexes]), F_hist[algo_names[i]][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
+                push!(conv_plot, conv_plot_data, conv_plot_markers)
+            else
+                @warn "No convergence data for algorithm $(algo_names[i]) on problem $(prob). Skipping plot."
+            end
+        end
+        plt_conv = PGFPlots.Axis(
+                conv_plot,
+                xlabel = "Number \$N\$ of \$ F \$ evaluations",
+                xmode = "log",
+                ylabel = "\$ F(x_N) \$",
+                title = "Convergence plot for problem \$ $(prob) \$",
+                legendPos= "north east",
+                #xmax = N_hist[algo_names[i]][xlim_conv] + (N_hist[algo_names[i]][xlim_conv] % 10 == 0 ? Int(10^(ceil(log10(N_hist[algo_names[i]][xlim_pxlim_converf])))) : Int(10^(ceil(log10(N_hist[algo_names[i]][xlim_conv])) - 1))) # Leave an additionnal blank space
+            )
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/ConvPlots")
+        PGFPlots.save("ConvPlot-p=$prob-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref.tikz", plt_conv)
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+
+    else
+        for i in eachindex(algo_names)
+            conv_plot_data = PGFPlots.Plots.Linear(N_hist[algo_names[i]], F_hist[algo_names[i]], style="$(line_color[i]), const plot", mark = "$(marks[i])", legendentry = "$(algo_names[i])")
+            push!(conv_plot, conv_plot_data)
+        end
+        plt_conv = PGFPlots.Axis(
+            conv_plot,
+            xlabel = "Number \$N\$ of \$ F \$ evaluations",
+            ylabel = "\$ F(x_N) \$",
+            title = "Convergence plot for problem \$ $(prob) \$",
+            legendPos= "north east"
+        )
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/ConvPlots")
+        PGFPlots.save("ConvPlot-p=$prob-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref.tikz", plt_conv)
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+
+    end
+end
+
+function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; adjusted::Bool = false, cons_handle = "PB", log_scaling::Bool = true, type_of_ref::String = "All_Final", start_point::String = "y0")
 
     for τ in τs
         for a in eachindex(algo_names)
@@ -83,9 +162,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmax = ks[xlim_data] + (ks[xlim_data] % 10 == 0 ? Int(10^(ceil(log10(ks[xlim_data])))) : Int(10^(ceil(log10(ks[xlim_data])) - 1))) # Leave an additionnal blank space
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
-            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-logscale-$type_of_ref.tikz", plt_perf)
+            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref.tikz", plt_perf)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/DataProfiles")
-            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-logscale-$type_of_ref.tikz", plt_data)
+            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref.tikz", plt_data)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
         else
             for i in eachindex(algo_names)
@@ -118,9 +197,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 ymax = 1.0
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
-            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-$type_of_ref.tikz", plt_perf)
+            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref.tikz", plt_perf)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/DataProfiles")
-            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-referee=$adjusted-$type_of_ref.tikz", plt_data)
+            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref.tikz", plt_data)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
         end
     end
