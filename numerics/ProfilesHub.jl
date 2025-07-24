@@ -21,10 +21,10 @@ log_scaling = true
 
 generate_files = false
 draw_profiles = true
-referee_please = false
+referee_please = true
 typeof_referee = "All_Final"
 generate_F_adjusted = false
-draw_profiles_adjusted = false
+draw_profiles_adjusted = true
 confirm_profiles = false
 
 @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
