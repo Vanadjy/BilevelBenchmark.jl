@@ -21,6 +21,7 @@ mutable struct NOMADOptions{R, I}
     display_stats::Vector{String}
     display_degree::I
     cons_handle::String
+    start_points::String
 
     function NOMADOptions{R, I}(;
         max_bb_eval::I                = 1000,
@@ -30,7 +31,8 @@ mutable struct NOMADOptions{R, I}
         max_time::R                   = 3600.0,
         display_stats::Vector{String} = ["EVAL", "SOL", "OBJ"],
         display_degree::I             = 0,
-        cons_handle::String           = "PB"
+        cons_handle::String           = "PB",
+        start_points::String          = "y0"
         ) where {R <: Real, I <: Int}
         DirectionTypes = ["ORTHO 2N" # 2n directions, no quadratic models
                         "ORTHO N+1 NEG" # n directions, the (n+1)th is the negative sum of the n first.
@@ -45,6 +47,7 @@ mutable struct NOMADOptions{R, I}
         @assert max_time > 0.0 "Need a positive time budget"
         @assert display_degree ∈ [0, 1, 2, 3] "Display degree indicated not supported in NOMAD. It must be an 0 to 3 integer."
         @assert cons_handle ∈ ["PB", "EB"] "Constraint handling error: choose a supported way to handle constraints i.e. either EB (extreme barrier) or PB (progressive barrier)"
+        @assert start_points ∈ ["y0", "yk-1"] "Start points must be either 'y0' or 'yk-1'. Other start points are not supported yet."
 
         return new{R, I}(
                 max_bb_eval,
@@ -54,7 +57,8 @@ mutable struct NOMADOptions{R, I}
                 max_time,
                 display_stats,
                 display_degree,
-                cons_handle
+                cons_handle,
+                start_points
         )
     end
 end

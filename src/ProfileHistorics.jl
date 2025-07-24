@@ -1,14 +1,14 @@
 export Profile_Historics
 
-function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}; max_budget::Int = 300, cons_handle::String = "PB") where {I <: Int, S <:String}
+function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}; max_budget::Int = 300, cons_handle::String = "PB", start_point::String = "y0") where {I <: Int, S <:String}
     ## Listing the problems ##
     n_probs = length(prob_numbers)
 
     ## Initialize solver options ##
     n_algos = length(algo_names)
-    options1 = NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle) # Basic options : ORTHO 2N and no search
-    options2 = NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle) # ORTHO N+1 NEG and no search
-    options3 = NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle) # ORTHO 2N and quadratic search
+    options1 = NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle, start_points = start_point) # Basic options : ORTHO 2N and no search
+    options2 = NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle, start_points = start_point) # ORTHO N+1 NEG and no search
+    options3 = NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle, start_points = start_point) # ORTHO 2N and quadratic search
     All_options = Dict(algo_names .=> [options1, options2, options3])
 
     # Instantiate historic storages ##

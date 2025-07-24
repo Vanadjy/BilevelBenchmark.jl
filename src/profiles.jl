@@ -2,22 +2,23 @@ export conv_plot, accuracy, Nap, rap, perf_profile!, data_profile!#, accuracy_pr
 
 using LaTeXStrings, Plots
 
-#=function conv_plot(p::Int; logscale = false)
+function conv_plot(f_hists, N_hists, prob::Int; logscale::Bool = false)
     graph = plot()
-    @inbounds for i in 1:3
+    ns = length(keys(N_hists[prob]))
+    @inbounds for algo in keys(N_hists[prob])
         if logscale
-            plot!(N[i][2:end], f[i](p)[2:end], linetype=:steppre, xaxis=:log10, yaxis=:log10, label="algorithm $i")
-            xlabel!(L"$N$ in $log_{10}$ scale")
-            ylabel!(L"$f(x^N)$ in $log_{10}$ scale")
+            plot!(N_hists[prob][algo], f[prob][algo], linetype=:steppre, xaxis=:log10, yaxis=:log10, label=key(N_hists[prob])[i],
+                  xlabel="Number of F evaluations",
+                  ylabel="F value")
         else
             plot!(N[i], f[i](p), linetype=:steppre, label="algorithm $i")
-            xlabel!("Objective evaluations")
-            ylabel!("Objective value")
+            xlabel!("Number of F evaluations")
+            ylabel!("F value")
         end
         title!("convergence plot for problem $p")
     end
     display(graph)
-end=#
+end
 
 function f_star(f_hists, prob::Int)
     obj_hists = f_hists[prob]
@@ -109,8 +110,8 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
         @inbounds for prob in eachindex(prob_list)
             Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ)
             model = get_bilevel_problem(prob_list[prob])
-            dimprob = model.dim[1] + model.dim[2]
-            if Nap_data ≤ k * (dimprob + 1) * Tap_data
+            dimprob = model.dim[2]*(model.dim[1] +1) 
+            if Nap_data ≤ k * (dimprob) * Tap_data
                 count += 1
             end
         end
