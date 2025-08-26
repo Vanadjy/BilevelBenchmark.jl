@@ -82,14 +82,14 @@ for prob in prob_numbers
 end=#
 
 hub_options = HubOPtions(
-    generate_files = true,
-    draw_conv = false,
-    draw_profiles = false,
-    referee_please = false,
-    typeof_referee = "All_All",
+    generate_files = false,
+    draw_conv = true,
+    draw_profiles = true,
+    referee_please = true,
+    typeof_referee = "All_Final",
     generate_F_adjusted = false,
     draw_conv_adjusted = false,
-    draw_profiles_adjusted = false,
+    draw_profiles_adjusted = true,
     confirm_profiles = false
 )
 
