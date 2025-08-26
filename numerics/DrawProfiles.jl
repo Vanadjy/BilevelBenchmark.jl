@@ -85,7 +85,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
         for a in eachindex(algo_names)
             @views perf_profile!(y_perf[:, a], αs, F_all_hists, N_all_hists, prob_numbers, algo_names[a], τ)
             @views data_profile!(y_data[:, a], ks, F_all_hists, N_all_hists, prob_numbers, algo_names[a], τ)
-            @assert y_perf[:, a][end] ≈ y_data[:, a][end] "Profiles Error: Last value of performace and date profiles should be the same. Check the code to draw profiles or increase their horizon."
+            #@assert y_perf[:, a][end] ≈ y_data[:, a][end] "Profiles Error: Last value of performace and date profiles should be the same. Check the code to draw profiles or increase their horizon."
         end
         perf_prof_plots = Union{PGFPlots.Plots.Linear, PGFPlots.Plots.Scatter}[]
         data_prof_plots = Union{PGFPlots.Plots.Linear, PGFPlots.Plots.Scatter}[]

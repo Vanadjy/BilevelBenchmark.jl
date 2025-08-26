@@ -12,6 +12,48 @@ mutable struct BilevelProblem
     sol::Union{Vector{Float64}, Float64}  # Solution or optimal value
 end
 
+mutable struct BilevelOptions
+    subsolver_name::String
+    γ::Float64
+    oppportunistic::Bool
+    ordered::Bool
+    search::Bool
+    orthogonal::Bool
+    max_neval_upper::Int
+    max_neval_upper_cons::Int
+    max_neval_lower::Int
+    Δ0::Float64
+    tol_upper::Float64
+    tol_lower::Float64
+    max_time::Float64
+    biphase::Bool
+    verbose::Bool
+
+    function BilevelOptions(;
+        subsolver_name::String = "NOMAD",
+        γ::Float64 = 1/2,
+        oppportunistic::Bool = true,
+        ordered::Bool = false,
+        search::Bool = false,
+        orthogonal::Bool = true,
+        max_neval_upper::Int = 1000,
+        max_neval_upper_cons::Int = 1000,
+        max_neval_lower::Int = 100,
+        Δ0::Float64 = 1.0,
+        tol_upper::Float64 = 1e-6,
+        tol_lower::Float64 = 1e-6,
+        max_time::Float64 = 3600.0,
+        biphase::Bool = true,
+        verbose::Bool = true
+    )
+        @assert Δ0 > 0.0 "Value Error: Initial mesh size Δ0 must be positive"
+        @assert ordered ≤ oppportunistic "Logical Error: Ordering scheme cannot be selected without an oppportunistic one"
+        @assert γ > 0.0 "Value Error: γ must be positive"
+        @assert γ < 1.0 "Value Error: γ must be lower than 1.0"
+        return new(subsolver_name, γ, oppportunistic, ordered, search, orthogonal, max_neval_upper, max_neval_upper_cons, max_neval_lower, Δ0, tol_upper, tol_lower, max_time, biphase, verbose)
+    end
+end
+
 mutable struct NOMADOptions{R, I}
     max_bb_eval::I
     quad_model_search::Bool
