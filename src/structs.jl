@@ -1,4 +1,4 @@
-export BilevelProblem, NOMADOptions
+export BilevelProblem, NOMADOptions, BilevelOptions
 
 mutable struct BilevelProblem
     name::String

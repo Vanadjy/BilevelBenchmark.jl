@@ -1,6 +1,6 @@
 ## REFEREE ONLY ON THE LAST ITERATE - JUST ONE ALGORITHM AS SELECTED REFEREE ##
 
-function referee_final!(model::BilevelProblem, xHists, yHists, fHists, prob::Int, algo::String, referee_name::String, nomad_options::NOMADOptions; tol_ref::R = 1e-3) where {R <: Float64}
+function referee_final!(model::BilevelProblem, xHists, yHists, fHists, prob::Int, algo::String, referee_name::String, nomad_options::NOMADOptions; tol_ref::R = 1e-3, starter::String = "y0") where {R <: Float64}
     referee_flag = false
     x_star = xHists[prob][algo][:, end]
     f_star = fHists[prob][algo][end]

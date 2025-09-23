@@ -1,4 +1,4 @@
-export GridSearch_subsolver, LL_subsolver, Bilevel_DS_WithoutCoupling, Biphase_feas, Bilevel_DS
+export GridSearch_subsolver, LL_subsolver, Bilevel_DS_WithoutCoupling, Biphase_feas, Bilevel_DS, CS_subsolver
 
 using NOMAD, Printf
 
@@ -39,6 +39,45 @@ function GridSearch_subsolver(f,
     return ybest, fbest
 end
 
+function CS_subsolver(f, g, y0, t; neval_tot = 100, δ0 = 1.0, ϵ = 1e-6, τ = 1/2, poll = "")
+    xk = y0
+    fbest = f(t, y0)
+    neval_f = 1
+    δk = δ0
+
+    Id = Matrix(I, length(y0), length(y0))
+    D = [Id -Id]
+    P = [D[:,i] for i in axes(D, 2)]
+
+    while (neval_f ≤ neval_tot) #&& (δk > ϵ)
+        found_upgrade = false
+        i = 1
+        while !found_upgrade && (neval_f ≤ neval_tot) && (i ≤ length(P))
+            Pi = xk + (δk * P[i])
+            f_Pi = f(t, Pi)
+            neval_f += 1
+            if (f_Pi < fbest) && (all(<=(0), g(t, Pi))) # feasible upgrade of f found in the polling : success (EB here)
+                fbest = f_Pi
+                xk = Pi
+
+                #reordering the poll so that the successful direction is in first
+                if i > 1
+                    P = vcat(circshift!(P[1:i], 1), P[i+1:end])
+                end
+
+                found_upgrade = true
+            end
+            i += 1
+        end
+
+        # polling step have failed : xk is a local min for the mesh
+        if !found_upgrade
+            δk *= τ
+        end
+    end
+    xk, fbest
+end
+
 function LL_subsolver(model::BilevelProblem,
                       i::Int,
                       xk,
@@ -50,7 +89,7 @@ function LL_subsolver(model::BilevelProblem,
                       nomad_options::NOMADOptions = NOMADOptions(),
                       max_neval_lower::Int = 100
     )
-    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt"]
+    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "CS"]
     nx = model.dim[1]
     ny = model.dim[2]
     yk_new = similar(yk)
@@ -69,6 +108,9 @@ function LL_subsolver(model::BilevelProblem,
         sol = Optimization.solve(prob, Optim.NelderMead())
         yk_new .= sol.u
         fk_new = sol.objective
+    elseif subsolver == "CS"
+        t = xk + δk * D[:, i]
+        yk_new, fk_new = CS_subsolver(model.f_func, model.g_func, yk, t; neval_tot = max_neval_lower, δ0 = Δk)
     elseif subsolver == "NOMAD"
         # Apply NOMAD solver
         t = xk + δk * D[:, i]
@@ -92,7 +134,7 @@ function LL_subsolver(model::BilevelProblem,
             pb = NomadProblem(ny, 1, ["OBJ"], bb)
         end
 
-        pb.options.max_bb_eval = nomad_options.max_bb_eval
+        pb.options.max_bb_eval = max_neval_lower
         pb.options.quad_model_search = nomad_options.quad_model_search
         pb.options.sgtelib_model_search = false
         pb.options.speculative_search = false
@@ -225,18 +267,11 @@ function Bilevel_DS_WithoutCoupling(model::BilevelProblem,
         while (i < size(D, 2)) && !(stop_poll) && (neval_upper < max_neval_upper) && (neval_upper_cons < max_neval_upper_cons)
             i += 1
 
-            yk_new, fk_new = LL_subsolver(model, i, xk, yk, subsolver, D; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny*max_neval_lower)
+            t = xk + δk * D[:, i]
+            yk_new, fk_new = LL_subsolver(model, i, xk, yk, subsolver, D; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny * max_neval_lower)
 
             neval_upper += 1
             Fk_new = F(t, yk_new)
-
-            # Check feasibility
-            Gk = G(t, yk_new)
-            neval_upper_cons += 1
-            if (any(>(0), Gk))
-                #@info "Infeasible point : don't call the blackbox"
-                continue # Infeasible point
-            end
             if (Fk_new < Fk) # Successful iteration
                 poll_improvement = true
                 xk .= t
@@ -311,7 +346,7 @@ function Biphase_LL(model, nomad_options, tol)
     return result.x_best_feas, result.bbo_best_feas[1]
 end
 
-function Biphase_feas(model, bilevel_options, nomad_options, tol)
+function Biphase_feas(model, bilevel_options, nomad_options, D, tol)
     @info "Starting bilevel first phase to find a feasible point."
     G = model.G_func
     g = model.g_func
@@ -347,6 +382,7 @@ function Bilevel_DS(model::BilevelProblem,
     search = bilevel_options.search
     orthogonal = bilevel_options.orthogonal
     max_time = bilevel_options.max_time
+    biphase = bilevel_options.biphase
     verbose = bilevel_options.verbose
 
     @assert γ > 0 "The parameter γ must be positive."
@@ -395,15 +431,15 @@ function Bilevel_DS(model::BilevelProblem,
 
 
     if (model.dim[4] > 0) && any(>(0), g(xk, yk)) # Need a single level first phase to find a feasible LL point
-        @info "Starting first phase to find a feasible LL point."
-        yk, fk = Biphase_LL(model, nomad_options, 1e-6)
+        if biphase
+            @info "Starting first phase to find a feasible LL point."
+            yk, fk = Biphase_LL(model, nomad_options, 1e-6)
+        end
     end
 
     if (model.dim[3] > 0) && (any(>(0), G(xk, yk))) # If the model has upper level couppling constraints and are violated
         if biphase
-            xk, yk = Biphase_feas(model, bilevel_options, nomad_options, 1e-6)
-        else
-            @error "The initial point is infeasible. Bilevel_DS cannot be run on an infeasible point."
+            xk, yk = Biphase_feas(model, bilevel_options, nomad_options, D, 1e-6)
         end
     end
 

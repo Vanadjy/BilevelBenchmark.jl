@@ -6,7 +6,7 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilev
 
     ## Initialize solver options ##
     n_algos = length(algo_names)
-    options1 = NOMADOptions(max_bb_eval = bilevel_options.max_neval_lower, quad_model_search = bilevel_options.search, direction_type = "ORTHO 2N", cons_handle = cons_handle, start_points = start_point) # ORTHO 2N and no search
+    options1 = "CS"
 
     options2 = NOMADOptions(max_bb_eval = bilevel_options.max_neval_lower, quad_model_search = bilevel_options.search, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle, start_points = start_point) # ORTHO N+1 NEG and no search
 
@@ -28,18 +28,32 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilev
         D = zeros(nx, 2*nx)
 
         for (algo, options) in All_options
-            x, y, Fbest, Historics = Bilevel_DS(model,
-                                                "NOMAD",
-                                                D;
-                                                nomad_options = options,
-                                                bilevel_options = bilevel_options
-            )
+            if options == "CS"
+                x, y, Fbest, Historics = Bilevel_DS(model,
+                                    "CS",
+                                    D;
+                                    bilevel_options = bilevel_options
+                )
 
-            N_all_hists[prob_iter][algo] = Historics[:Nhist]
-            F_all_hists[prob_iter][algo] = Historics[:Fhist]
-            f_all_hists[prob_iter][algo] = Historics[:fhist]
-            x_all_hists[prob_iter][algo] = Historics[:xhist]
-            y_all_hists[prob_iter][algo] = Historics[:yhist]
+                N_all_hists[prob_iter][algo] = Historics[:Nhist]
+                F_all_hists[prob_iter][algo] = Historics[:Fhist]
+                f_all_hists[prob_iter][algo] = Historics[:fhist]
+                x_all_hists[prob_iter][algo] = Historics[:xhist]
+                y_all_hists[prob_iter][algo] = Historics[:yhist]
+            else
+                x, y, Fbest, Historics = Bilevel_DS(model,
+                                                    "NOMAD",
+                                                    D;
+                                                    nomad_options = options,
+                                                    bilevel_options = bilevel_options
+                )
+
+                N_all_hists[prob_iter][algo] = Historics[:Nhist]
+                F_all_hists[prob_iter][algo] = Historics[:Fhist]
+                f_all_hists[prob_iter][algo] = Historics[:fhist]
+                x_all_hists[prob_iter][algo] = Historics[:xhist]
+                y_all_hists[prob_iter][algo] = Historics[:yhist]
+            end
         end
     end
     return N_all_hists, F_all_hists, f_all_hists, x_all_hists, y_all_hists

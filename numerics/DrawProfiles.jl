@@ -144,7 +144,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmode = "log",
                 ylabel = "Porportion of problem solved",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east",
+                legendPos= "north east",
                 ymin = 0.0,
                 ymax = 1.0,
                 xmax = αs[xlim_perf] + (αs[xlim_perf] % 10 == 0 ? Int(10^(ceil(log10(αs[xlim_perf])))) : Int(10^(ceil(log10(αs[xlim_perf])) - 1))) # Leave an additionnal blank space
@@ -156,7 +156,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmode="log",
                 ylabel = "Porportion of problem solved",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east",
+                legendPos= "north east",
                 ymin = 0.0,
                 ymax = 1.0,
                 xmax = ks[xlim_data] + (ks[xlim_data] % 10 == 0 ? Int(10^(ceil(log10(ks[xlim_data])))) : Int(10^(ceil(log10(ks[xlim_data])) - 1))) # Leave an additionnal blank space
@@ -182,7 +182,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xlabel = "Ratio of function evaluation \$ \\alpha \$",
                 ylabel = "Porportion of problem solved",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east",
+                legendPos= "north east",
                 ymin = 0.0,
                 ymax = 1.0
             )
@@ -192,7 +192,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xlabel = "Groups of \$ n_p + 1\$ evaluations \$k\$",
                 ylabel = "Porportion of problem solved",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
-                legendPos= "south east",
+                legendPos= "north east",
                 ymin = 0.0,
                 ymax = 1.0
             )
