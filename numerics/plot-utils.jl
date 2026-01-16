@@ -8,6 +8,8 @@ mutable struct HubOPtions{B, S}
     draw_conv_adjusted::B
     draw_profiles_adjusted::B
     confirm_profiles::B
+    save_logs::B
+    ω_toggle::B
 
     function HubOPtions{B, S}(;
                     generate_files::B = true,
@@ -18,13 +20,15 @@ mutable struct HubOPtions{B, S}
                     generate_F_adjusted::B = false,
                     draw_conv_adjusted::B = false,
                     draw_profiles_adjusted::B = false,
-                    confirm_profiles::B = false
+                    confirm_profiles::B = false,
+                    save_logs::B = false,
+                    ω_toggle::B = false
         ) where {B <: Bool, S <: String}
 
         @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
         @assert generate_F_adjusted <= referee_please "Cannot generate F adjusted if no referee."
         @assert draw_conv_adjusted <= referee_please "Cannot draw adjusted convergence plot if no referee."
-        @assert typeof_referee ∈ ["All_All", "All_Final", "Single_Final"] "Invalid type of referee. Must be one of: All_All, All_Final, Single_Final."
+        @assert typeof_referee ∈ ["All_All", "All_Final", "Single_Final", "All_Backward"] "Invalid type of referee. Must be one of: All_All, All_Final, Single_Final."
         typeof_referee = (referee_please ? typeof_referee : "")
 
         return new{B, S}(
@@ -36,14 +40,16 @@ mutable struct HubOPtions{B, S}
                 generate_F_adjusted,
                 draw_conv_adjusted,
                 draw_profiles_adjusted,
-                confirm_profiles
+                confirm_profiles,
+                save_logs,
+                ω_toggle
         )
     end
 end
 
 HubOPtions(args...; kwargs...) = HubOPtions{Bool, String}(args...; kwargs...)
 
-function log_scale(n)
+function log_scale(n::Int)
   try
     Int(log10(n))
   catch
@@ -51,6 +57,12 @@ function log_scale(n)
   end
   log_scale = [k * 10.0^(i) for i in 0:Int(log10(n) - 1) for k in 1.0:9.0]
   return [Int.(log_scale); Int(10.0^(log10(n)))]
+end
+
+function dec_scale(n::Int)
+    k = Int(floor(log10(n)))
+    dec_scale = [j*10^k+i*10^(k-1) for j in 1.0:(n/10^k)-1 for i in 1.0:9.0]
+    return vcat(Int.([j*10^k+i*10^(k-1) for j in 0.0:(n/10^k)-1 for i in 1.0:9.0]), n)
 end
 
 function Nap_Matrix(f_hists, N_hists, algo_names::Vector{String}, all_probs::Vector{Int}, τ::Real)

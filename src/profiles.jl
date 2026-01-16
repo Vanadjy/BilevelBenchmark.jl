@@ -103,14 +103,18 @@ function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Uni
     ylabel!("Proportion of τ-solved problems")=#
 end
 
-function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real)
+function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real; ω_toggle::Bool = false, λ_choice::String = "LL")
     count = 0
     @inbounds for l in eachindex(ks)
         k = ks[l]
         @inbounds for prob in eachindex(prob_list)
             Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ)
             model = get_bilevel_problem(prob_list[prob])
-            dimprob = model.dim[2]*(model.dim[1] +1) 
+            if ω_toggle # if we scaled the UL evaluations with ω
+                dimprob = λ_choice == "LL" ? model.dim[2] + 1 : model.dim[1] + 1
+            else
+                dimprob = model.dim[2]*(model.dim[1] +1)
+            end
             if Nap_data ≤ k * (dimprob) * Tap_data
                 count += 1
             end

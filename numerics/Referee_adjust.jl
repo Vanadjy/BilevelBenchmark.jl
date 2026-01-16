@@ -246,3 +246,28 @@ function Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_num
     end
     return F_all_hists_adjusted
 end
+
+## REFEREE FROM THE LAST ITERATE HISTORIC AND GOING BACKWARD ##
+
+function Referee_backward_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{String}; max_budget::Int = 300, cons_handle::String = "PB")
+    for prob in eachindex(prob_numbers)
+        model = get_bilevel_problem(prob_numbers[prob])
+        all_options = [NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
+                       NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle),
+                       NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle)]
+        for algo in algo_names
+            if x_all_hists[prob][algo][end] !== x_all_hists[prob][algo][1] # If the algorithm did not moved from the starting point, ignore it
+                flag = true
+                k = length(f_all_hists[prob][algo])
+                while flag && k >= 1 # Once we found an admissible point in the historic, we stop
+                    flag = intern_all_referee(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, all_options)
+                    if flag #referee found at least once a better LL solution than algo
+                        F_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the upper objective historic 
+                    end
+                    k -= 1
+                end
+            end
+        end
+    end
+    return F_all_hists_adjusted
+end

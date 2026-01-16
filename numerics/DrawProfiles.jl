@@ -61,9 +61,28 @@ function draw_convergence!(F_all_hists, N_all_hists, prob::Int, algo_names; logs
         cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
     else
+        scatter_log = dec_scale(max_budget)
         for i in eachindex(algo_names)
-            conv_plot_data = PGFPlots.Plots.Linear(N_hist[algo_names[i]], F_hist[algo_names[i]], style="$(line_color[i]), const plot", mark = "$(marks[i])", legendentry = "$(algo_names[i])")
-            push!(conv_plot, conv_plot_data)
+            # For legend display
+            if !isempty(F_hist[algo_names[i]])
+                legend_conv_plot = PGFPlots.Plots.Linear(N_hist[algo_names[i]][1:2], F_hist[algo_names[i]][1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                push!(conv_plot, legend_conv_plot)
+            else
+                @warn "No convergence data for algorithm $(algo_names[i]) on problem $(prob). Skipping legend entry."
+            end
+        end
+        for i in eachindex(algo_names)
+            if !isempty(F_hist[algo_names[i]])
+                # Plot the convergence data
+                filtered_Ns_log = filter(x -> x < N_hist[algo_names[i]][end], scatter_log)
+                marker_indexes = findall(x -> x in filtered_Ns_log, N_hist[algo_names[i]])
+                
+                conv_plot_data = PGFPlots.Plots.Linear(N_hist[algo_names[i]], F_hist[algo_names[i]], style="$(line_color[i]), const plot, solid", mark = "none")
+                conv_plot_markers = PGFPlots.Plots.Scatter(intersect(filtered_Ns_log, N_hist[algo_names[i]][marker_indexes]), F_hist[algo_names[i]][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
+                push!(conv_plot, conv_plot_data, conv_plot_markers)
+            else
+                @warn "No convergence data for algorithm $(algo_names[i]) on problem $(prob). Skipping plot."
+            end
         end
         plt_conv = PGFPlots.Axis(
             conv_plot,
@@ -79,12 +98,12 @@ function draw_convergence!(F_all_hists, N_all_hists, prob::Int, algo_names; logs
     end
 end
 
-function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; adjusted::Bool = false, cons_handle = "PB", log_scaling::Bool = true, type_of_ref::String = "All_Final", start_point::String = "y0")
+function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; adjusted::Bool = false, cons_handle = "PB", log_scaling::Bool = true, type_of_ref::String = "All_Final", start_point::String = "y0", ω_toggle::Bool = false, λ_choice::String = "LL")
 
     for τ in τs
         for a in eachindex(algo_names)
             @views perf_profile!(y_perf[:, a], αs, F_all_hists, N_all_hists, prob_numbers, algo_names[a], τ)
-            @views data_profile!(y_data[:, a], ks, F_all_hists, N_all_hists, prob_numbers, algo_names[a], τ)
+            @views data_profile!(y_data[:, a], ks, F_all_hists, N_all_hists, prob_numbers, algo_names[a], τ; ω_toggle = ω_toggle, λ_choice = λ_choice)
             #@assert y_perf[:, a][end] ≈ y_data[:, a][end] "Profiles Error: Last value of performace and date profiles should be the same. Check the code to draw profiles or increase their horizon."
         end
         perf_prof_plots = Union{PGFPlots.Plots.Linear, PGFPlots.Plots.Scatter}[]
@@ -142,7 +161,7 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 perf_prof_plots,
                 xlabel = "Ratio of function evaluation \$ \\alpha \$",
                 xmode = "log",
-                ylabel = "Porportion of problem solved",
+                ylabel = "Proportion of \$ \\tau \$-solved problems",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
                 legendPos= "north east",
                 ymin = 0.0,
@@ -152,9 +171,9 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
 
             plt_data = PGFPlots.Axis(
                 data_prof_plots,
-                xlabel = "Groups of \$ n_p + 1\$ evaluations \$k\$",
+                xlabel = ω_toggle ? (λ_choice == "LL" ? "Groups of \$ n_y + 1\$ evaluations \$k\$" : "Groups of \$ n_x + 1\$ evaluations \$k\$") : "Groups of \$ n_y(n_x + 1) \$ evaluations \$k\$",
                 xmode="log",
-                ylabel = "Porportion of problem solved",
+                ylabel = "Proportion of \$ \\tau \$-solved problems",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
                 legendPos= "north east",
                 ymin = 0.0,
@@ -162,25 +181,43 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
                 xmax = ks[xlim_data] + (ks[xlim_data] % 10 == 0 ? Int(10^(ceil(log10(ks[xlim_data])))) : Int(10^(ceil(log10(ks[xlim_data])) - 1))) # Leave an additionnal blank space
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
-            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref.tikz", plt_perf)
+            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref-costly=$λ_choice.tikz", plt_perf)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/DataProfiles")
-            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref.tikz", plt_data)
+            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-logscale-$type_of_ref-costly=$λ_choice.tikz", plt_data)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
         else
+            scatter_dec = dec_scale(αs[end])
+
+            # For legend display
             for i in eachindex(algo_names)
-                perf_profile_data = PGFPlots.Plots.Linear(αs, y_perf[:, i], style="$(line_color[i]), const plot", mark = "$(marks[i])", legendentry = "$(algo_names[i])")
-                push!(perf_prof_plots, perf_profile_data)
+                legend_perf_prof = PGFPlots.Plots.Linear(αs[1:2], [y_perf[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                push!(perf_prof_plots, legend_perf_prof)
+
+                legend_data_prof = PGFPlots.Plots.Linear(ks[1:2], [y_data[:, i][j] for j in 1:2], mark = "$(marks[i])", style="$(line_color[i]), const plot", legendentry = "$(algo_names[i])")
+                push!(data_prof_plots, legend_data_prof)
+            end
+
+
+            for i in eachindex(algo_names)
+                perf_profile_data = PGFPlots.Plots.Linear(αs, y_perf[:, i], style="$(line_color[i]), const plot, solid", mark = "none")
+                marker_indexes = findall(x -> x in scatter_dec, αs)
+                perf_profile_markers = PGFPlots.Plots.Scatter(αs[marker_indexes], y_perf[:, i][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
+
+                push!(perf_prof_plots, perf_profile_data, perf_profile_markers)
             end
 
             for i in eachindex(algo_names)
-                data_profile_data = PGFPlots.Plots.Linear(ks, y_data[:, i], style="$(line_color[i]), const plot", mark = "$(marks[i])", legendentry = "$(algo_names[i])")
-                push!(data_prof_plots, data_profile_data)
+                data_profile_data = PGFPlots.Plots.Linear(ks, y_data[:, i], style="$(line_color[i]), const plot, solid", mark = "none")
+                marker_indexes = findall(x -> x in scatter_dec, ks)
+                data_profile_markers = PGFPlots.Plots.Scatter(ks[marker_indexes], y_data[:, i][marker_indexes], style="$(line_color[i])", mark = "$(marks[i])")
+
+                push!(data_prof_plots, data_profile_data, data_profile_markers)
             end
 
             plt_perf = PGFPlots.Axis(
                 perf_prof_plots,
                 xlabel = "Ratio of function evaluation \$ \\alpha \$",
-                ylabel = "Porportion of problem solved",
+                ylabel = "Proportion of \$ \\tau \$-solved problems",
                 title = "Performance profile \$\\tau = $(Int(τ*100))\\%\$",
                 legendPos= "north east",
                 ymin = 0.0,
@@ -189,17 +226,17 @@ function draw_profiles!(τs, αs, ks, algo_names, prob_numbers, F_all_hists, N_a
 
             plt_data = PGFPlots.Axis(
                 data_prof_plots,
-                xlabel = "Groups of \$ n_p + 1\$ evaluations \$k\$",
-                ylabel = "Porportion of problem solved",
+                xlabel = ω_toggle ? (λ_choice == "LL" ? "Groups of \$ n_y + 1\$ evaluations \$k\$" : "Groups of \$ n_x + 1\$ evaluations \$k\$") : "Groups of \$ n_y(n_x + 1) \$ evaluations \$k\$",
+                ylabel = "Proportion of \$ \\tau \$-solved problems",
                 title = "Data profile \$\\tau = $(Int(τ*100))\\%\$",
                 legendPos= "north east",
                 ymin = 0.0,
                 ymax = 1.0
             )
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/PerfProfiles")
-            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref.tikz", plt_perf)
+            PGFPlots.save("PerformanceProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref-costly=$λ_choice.tikz", plt_perf)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/Plots/DataProfiles")
-            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref.tikz", plt_data)
+            PGFPlots.save("DataProfile-tau=$(Int(τ*100))-n_probs=$(length(all_probs))-cons_handle=$(cons_handle)-start=$start_point-referee=$adjusted-$type_of_ref-costly=$λ_choice.tikz", plt_data)
             cd(raw"/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
         end
     end

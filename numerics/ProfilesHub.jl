@@ -6,6 +6,8 @@ using Logging
 using BenchmarkProfiles
 using Plots
 
+io = open("Output_intern_total_referee.txt", "w+")
+
 include("plot_settings.jl")
 include("plot-utils.jl")
 include("GenerateFiles.jl")
@@ -31,9 +33,10 @@ for prob in prob_numbers
     end
 end=#
 
-algo_names = ["CS", "MADS-NoSearch", "MADS-Default"]
-cons_handle = "PB"
-log_scaling = true
+algo_names = ["Algo1", "Algo2", "Algo3"]
+
+cons_handle = "EB"
+log_scaling = false
 starter = "y0" # "y0" or "yk-1"
 
 upper_budget = 300
@@ -63,12 +66,19 @@ hub_options = HubOPtions(
     draw_conv = false,
     draw_profiles = true,
     referee_please = true,
-    typeof_referee = "All_All",
-    generate_F_adjusted = false,
+    typeof_referee = "All_All", # Possibles : "Single_Final", "All_Final", "All_All", "All_Backward"
+    generate_F_adjusted = true,
     draw_conv_adjusted = false,
     draw_profiles_adjusted = true,
-    confirm_profiles = false
+    confirm_profiles = false,
+    save_logs = false,
+    ω_toggle = true
 )
+
+if hub_options.save_logs
+    logger = SimpleLogger(io)
+    global_logger(logger)
+end
 
 path_jld2 = "/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/JLD2saves"
 
@@ -91,15 +101,36 @@ end
 #close(io)
 
 cd(path_jld2)
-N_all_hists = load_object("N_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
+N_UL_all_hists = load_object("N_UL_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
+N_LL_all_hists = load_object("N_LL_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 F_all_hists = load_object("F_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 f_all_hists = load_object("f_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 x_all_hists = load_object("x_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 y_all_hists = load_object("y_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
+t_all_hists = load_object("t_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
-αs = collect(1:0.1:100)
-ks = collect(1:0.1:100)
+N_all_hists = copy(N_UL_all_hists)
+λ_choice = "LL" # "UL" or "LL"
+if hub_options.ω_toggle
+    λ_list = load_object("numerics/time_and_omega_list/omega_list.jld2")
+    X = collect(1:length(prob_numbers))
+    gr()
+    plot = scatter(X, λ_list, xlabel = "Problem index", ylabel = "λ value", title = "Value of λ for each problem")
+    savefig(plot, "lambdas_scatter.pdf")
+    for prob in eachindex(prob_numbers)
+        for algo in keys(N_UL_all_hists[prob])
+            if λ_choice == "LL"
+                N_all_hists[prob][algo] .= λ_list[prob]*N_UL_all_hists[prob][algo] .+ N_LL_all_hists[prob][algo]
+            else
+                N_all_hists[prob][algo] .= N_UL_all_hists[prob][algo] .+ N_LL_all_hists[prob][algo]./λ_list[prob]
+            end
+        end
+    end
+end
+
+αs = collect(1:1:3000)
+ks = collect(1:1:3000)
 y_perf = zeros(Float64, length(αs), length(algo_names))
 y_data = zeros(Float64, length(ks), length(algo_names))
 
@@ -119,7 +150,7 @@ if hub_options.draw_conv
 end
 
 if hub_options.draw_profiles
-    draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = "", start_point = starter)
+    draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = "", start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
 end
 
 if hub_options.referee_please
@@ -138,7 +169,7 @@ if hub_options.referee_please
                     F_all_hists_adjusted[prob_index][1][algo] .= fill(Inf, length(F_all_hists[prob_index][1][algo]))
                 end
             end
-            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, start_point = starter)
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
         end
     elseif hub_options.typeof_referee == "All_Final"
         algo_blames = Referee_all_adjust(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
@@ -154,7 +185,7 @@ if hub_options.referee_please
                     F_all_hists_adjusted[prob_index][1][algo] .= fill(Inf, length(F_all_hists[prob_index][1][algo]))
                 end
             end
-            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter)
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
         end
     elseif hub_options.typeof_referee == "All_All"
         F_all_hists_adjusted = copy(F_all_hists)
@@ -169,7 +200,27 @@ if hub_options.referee_please
         cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
         if hub_options.draw_profiles_adjusted
-            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter)
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
+        end
+        if hub_options.draw_conv_adjusted
+            for p in conv_problems
+                draw_convergence!(F_all_hists_adjusted, N_all_hists, p, algo_names; logscale = log_scaling, type_of_ref = "adjusted", cons_handle = cons_handle, adjusted = hub_options.draw_conv_adjusted, start_point = starter)
+            end
+        end
+    elseif hub_options.typeof_referee == "All_Backward"
+        F_all_hists_adjusted = copy(F_all_hists)
+        if hub_options.generate_F_adjusted
+            Referee_backward_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
+            cd(path_jld2)
+            JLD2.save_object("F_all_hists_adjusted-backward-cons=$cons_handle-start=$starter-$(hub_options.typeof_referee).jld2", F_all_hists_adjusted)
+            cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+        end
+        cd(path_jld2)
+        F_all_hists_adjusted = JLD2.load_object("F_all_hists_adjusted-backward-cons=$cons_handle-start=$starter-$(hub_options.typeof_referee).jld2")
+        cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
+
+        if hub_options.draw_profiles_adjusted
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
         end
         if hub_options.draw_conv_adjusted
             for p in conv_problems
@@ -178,3 +229,5 @@ if hub_options.referee_please
         end
     end
 end
+
+close(io)
