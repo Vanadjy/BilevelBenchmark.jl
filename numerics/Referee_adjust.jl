@@ -227,7 +227,7 @@ function intern_all_referee(k::Int, model::BilevelProblem, xHists, yHists, fHist
     return referee_flag
 end
 
-function Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{String}; max_budget::Int = 300, cons_handle::String = "PB")
+function Referee_all_historic_adjust!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{String}; max_budget::Int = 300, cons_handle::String = "PB")
     for prob in eachindex(prob_numbers)
         model = get_bilevel_problem(prob_numbers[prob])
         all_options = [NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
@@ -238,18 +238,26 @@ function Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_num
                 for k in eachindex(f_all_hists[prob][algo])
                     flag = intern_all_referee(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, all_options)
                     if flag #referee found at least once a better LL solution than algo
-                        F_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the upper objective historic 
+                        F_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the upper objective historic
+                        N_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the lower objective historic
                     end
                 end
             end
         end
     end
-    return F_all_hists_adjusted
+    # After the process, remove all Inf entries from the historics
+    for prob in eachindex(prob_numbers)
+        for algo in algo_names
+            filter!(!isinf, F_all_hists_adjusted[prob][algo])
+            filter!(!isinf, N_all_hists_adjusted[prob][algo])
+        end
+    end
+    return F_all_hists_adjusted, N_all_hists_adjusted
 end
 
 ## REFEREE FROM THE LAST ITERATE HISTORIC AND GOING BACKWARD ##
 
-function Referee_backward_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{String}; max_budget::Int = 300, cons_handle::String = "PB")
+function Referee_backward_historic_adjust!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{String}; max_budget::Int = 300, cons_handle::String = "PB")
     for prob in eachindex(prob_numbers)
         model = get_bilevel_problem(prob_numbers[prob])
         all_options = [NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
@@ -263,11 +271,19 @@ function Referee_backward_historic_adjust!(F_all_hists_adjusted, algo_names, pro
                     flag = intern_all_referee(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, all_options)
                     if flag #referee found at least once a better LL solution than algo
                         F_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the upper objective historic 
+                        N_all_hists_adjusted[prob][algo][k] = Inf # Set at Inf the corresponding value in the lower objective historic
                     end
                     k -= 1
                 end
             end
         end
     end
-    return F_all_hists_adjusted
+    # After the process, remove all Inf entries from the historics
+    for prob in eachindex(prob_numbers)
+        for algo in algo_names
+            filter!(!isinf, F_all_hists_adjusted[prob][algo])
+            filter!(!isinf, N_all_hists_adjusted[prob][algo])
+        end
+    end
+    return F_all_hists_adjusted, N_all_hists_adjusted
 end

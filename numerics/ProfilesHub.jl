@@ -36,7 +36,7 @@ end=#
 algo_names = ["Algo1", "Algo2", "Algo3"]
 
 cons_handle = "EB"
-log_scaling = false
+log_scaling = true
 starter = "y0" # "y0" or "yk-1"
 
 upper_budget = 300
@@ -100,6 +100,8 @@ end
 # Close the file after logging is complete
 #close(io)
 
+## Load already generated historics ##
+
 cd(path_jld2)
 N_UL_all_hists = load_object("N_UL_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 N_LL_all_hists = load_object("N_LL_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
@@ -110,13 +112,17 @@ y_all_hists = load_object("y_all_hists-cons=$cons_handle-start=$starter-budg_u=$
 t_all_hists = load_object("t_all_hists-cons=$cons_handle-start=$starter-budg_u=$(upper_budget).jld2")
 cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
 
+
+## Scale the N using λ ##
+
+
 N_all_hists = copy(N_UL_all_hists)
 λ_choice = "LL" # "UL" or "LL"
 if hub_options.ω_toggle
     λ_list = load_object("numerics/time_and_omega_list/omega_list.jld2")
     X = collect(1:length(prob_numbers))
     gr()
-    plot = scatter(X, λ_list, xlabel = "Problem index", ylabel = "λ value", title = "Value of λ for each problem")
+    plot = scatter(X, λ_list, xlabel = "Problem index", ylabel = "λ value", title = "Value of λ for each problem", yaxis = :log)
     savefig(plot, "lambdas_scatter.pdf")
     for prob in eachindex(prob_numbers)
         for algo in keys(N_UL_all_hists[prob])
@@ -129,10 +135,15 @@ if hub_options.ω_toggle
     end
 end
 
-αs = collect(1:1:3000)
-ks = collect(1:1:3000)
+## Drawing profiles, convergence plots and, if asked, confirming profiles ##
+
+lim = 1000
+αs = collect(1:1:lim)
+ks = collect(1:1:lim)
+ds = collect(1:1:lim)
 y_perf = zeros(Float64, length(αs), length(algo_names))
 y_data = zeros(Float64, length(ks), length(algo_names))
+y_acc = zeros(Float64, length(ds), length(algo_names))
 
 if hub_options.confirm_profiles
     for τ in [1e-1, 1e-2]
@@ -153,44 +164,55 @@ if hub_options.draw_profiles
     draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists, N_all_hists; cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = "", start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
 end
 
+## Referee adjustments ##
+
 if hub_options.referee_please
     if hub_options.typeof_referee == "Single_Final"
         referee_name = "NOMAD"
         algo_blames = Referee_adjust(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referee_name)
         F_all_hists_adjusted = copy(F_all_hists)
+        N_all_hists_adjusted = copy(N_all_hists)
 
         if hub_options.draw_profiles_adjusted
             # Change F historics for the accuracy computation
             for algo in algo_names
                 for issued_prob in algo_blames[algo]
-                    prob_index = findall(x->x==issued_prob, prob_numbers)
+                    prob_index = findfirst(x->x==issued_prob, prob_numbers)
 
                     # If the referee found a better final solution, invalidate ALL the historic of this algo for this problem
-                    F_all_hists_adjusted[prob_index][1][algo] .= fill(Inf, length(F_all_hists[prob_index][1][algo]))
+                    F_all_hists_adjusted[prob_index][algo] .= fill(Inf, length(F_all_hists[prob_index][algo]))
+                    N_all_hists_adjusted[prob_index][algo] .= fill(Inf, length(N_all_hists[prob_index][algo]))
                 end
             end
-            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists_adjusted; adjusted = draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
         end
+
+    # Intern Final Referee #
     elseif hub_options.typeof_referee == "All_Final"
         algo_blames = Referee_all_adjust(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
         F_all_hists_adjusted = copy(F_all_hists)
+        N_all_hists_adjusted = copy(N_all_hists)
 
         if hub_options.draw_profiles_adjusted
             # Change F historics for the accuracy computation
             for algo in algo_names
                 for issued_prob in algo_blames[algo]
-                    prob_index = findall(x->x==issued_prob, prob_numbers)
+                    prob_index = findfirst(x->x==issued_prob, prob_numbers)
 
                     # If the referee found a better final solution, invalidate ALL the historic of this algo for this problem
-                    F_all_hists_adjusted[prob_index][1][algo] .= fill(Inf, length(F_all_hists[prob_index][1][algo]))
+                    F_all_hists_adjusted[prob_index][algo] = []
+                    N_all_hists_adjusted[prob_index][algo] = []
                 end
             end
-            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
+            draw_profiles!([1e-1, 1e-2], αs, ks, algo_names, prob_numbers, F_all_hists_adjusted, N_all_hists_adjusted; adjusted = hub_options.draw_profiles_adjusted, cons_handle = cons_handle, log_scaling = log_scaling, type_of_ref = hub_options.typeof_referee, start_point = starter, ω_toggle = hub_options.ω_toggle, λ_choice = λ_choice)
         end
+
+    # Intern Total Referee #
     elseif hub_options.typeof_referee == "All_All"
         F_all_hists_adjusted = copy(F_all_hists)
+        N_all_hists_adjusted = copy(N_all_hists)
         if hub_options.generate_F_adjusted
-            Referee_all_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
+            Referee_all_historic_adjust!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
             cd(path_jld2)
             JLD2.save_object("F_all_hists_adjusted-cons=$cons_handle-start=$starter-$(hub_options.typeof_referee).jld2", F_all_hists_adjusted)
             cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
@@ -207,10 +229,13 @@ if hub_options.referee_please
                 draw_convergence!(F_all_hists_adjusted, N_all_hists, p, algo_names; logscale = log_scaling, type_of_ref = "adjusted", cons_handle = cons_handle, adjusted = hub_options.draw_conv_adjusted, start_point = starter)
             end
         end
+    
+    # Intern Backward Referee #
     elseif hub_options.typeof_referee == "All_Backward"
         F_all_hists_adjusted = copy(F_all_hists)
+        N_all_hists_adjusted = copy(N_all_hists)
         if hub_options.generate_F_adjusted
-            Referee_backward_historic_adjust!(F_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
+            Referee_backward_historic_adjust!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, algo_names)
             cd(path_jld2)
             JLD2.save_object("F_all_hists_adjusted-backward-cons=$cons_handle-start=$starter-$(hub_options.typeof_referee).jld2", F_all_hists_adjusted)
             cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")

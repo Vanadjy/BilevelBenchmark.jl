@@ -999,7 +999,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 49 || prob_no == "LuDebSinha2016a"
-        @warn "Problem LuDebSinha2016a is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
+        #@warn "Problem LuDebSinha2016a is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016a",
             [1, 1, 4, 0],
@@ -1024,7 +1024,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 50 || prob_no == "LuDebSinha2016b"
-        @warn "Problem LuDebSinha2016b is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
+        #@warn "Problem LuDebSinha2016b is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016b",
             [1, 1, 4, 0],
@@ -1046,7 +1046,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 51 || prob_no == "LuDebSinha2016c"
-        @warn "Problem LuDebSinha2016c is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
+        #@warn "Problem LuDebSinha2016c is wrongly implemented : its domain is not restricted by the constraints and can take undefined values"
         return BilevelProblem(
             "LuDebSinha2016c",
             [1, 1, 4, 0],
@@ -2292,7 +2292,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 124 || prob_no == "Zlobec2001b"
-        @warn "Zlobec2001b is not a closed problem, no optimal solution is available"
+        #@warn "Zlobec2001b is not a closed problem, no optimal solution is available"
         return BilevelProblem(
             "Zlobec2001b",
             [1, 1, 2, 4],
@@ -2437,7 +2437,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
 
         # Example for N = 10
     elseif prob_no == 131 || prob_no == "RobustPortfolioP1"
-        @warn "RobustPortfolioP1 is encoded as a special case where N=10 and δ=2."
+        #@warn "RobustPortfolioP1 is encoded as a special case where N=10 and δ=2."
         return BilevelProblem(
             "RobustPortfolioP1",
             [11, 10, 13, 11], # Initial point depends on N
@@ -2461,7 +2461,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 132 || prob_no == "RobustPortfolioP2"
-        @warn "RobustPortfolioP2 is encoded as a special case where N=10"
+        #@warn "RobustPortfolioP2 is encoded as a special case where N=10"
         return BilevelProblem(
             "RobustPortfolioP2",
             [11, 10, 13, 11], # N is problem parameter
@@ -2940,7 +2940,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         )
 
     elseif prob_no == 156 || prob_no == "MershaDempe2006Ex1"
-        @warn "MershaDempe2006Ex1 has no optimal solution."
+        #@warn "MershaDempe2006Ex1 has no optimal solution."
         return BilevelProblem(
             "MershaDempe2006Ex1",
             [1, 1, 1, 5],
@@ -3158,7 +3158,7 @@ function get_bilevel_problem(prob_no::Union{Int,String})
         # [dim_x, dim_y, dim_G, dim_g] = [1, 1, 3, 2]
         # xy = [1, 1]
         # Ff = [1, -1, 1]
-        @warn "Problem MitsosBarton2006Ex32 has no optimal solution"
+        #@warn "Problem MitsosBarton2006Ex32 has no optimal solution"
         return BilevelProblem(
             "MitsosBarton2006Ex32",
             [1, 1, 3, 2],

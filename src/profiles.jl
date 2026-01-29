@@ -1,4 +1,4 @@
-export conv_plot, accuracy, Nap, rap, perf_profile!, data_profile!#, accuracy_profile
+export conv_plot, accuracy, Nap, rap, perf_profile!, data_profile!, accuracy_profile!
 
 using LaTeXStrings, Plots
 
@@ -27,32 +27,42 @@ function f_star(f_hists, prob::Int)
 
     @assert n_algos > 1 "Trying to compare only one algorithm for performace/data profiles"
 
-    best_val = obj_hists[algos[1]][end]
+    best_val = length(obj_hists[algos[1]]) == 0 ? Inf : obj_hists[algos[1]][end]
     for a in 2:n_algos
-        if best_val > obj_hists[algos[a]][end]
-            best_val = obj_hists[algos[a]][end]
+        candidate_val = length(obj_hists[algos[a]]) == 0 ? Inf : obj_hists[algos[a]][end]
+        if best_val > candidate_val
+            best_val = candidate_val
         end
     end
     return best_val
 end
 
 function f_0(f_hists, prob::Int, algo::Union{Int, String})
-    obj_hists = f_hists[prob][algo]
-    f0 = Inf
-    if !isinf(obj_hists[1])
-        f0 = obj_hists[1]
-    else
-        i = 1
-        while i <= length(obj_hists[1]) && isinf(f0)
-            i += 1
-            if !isinf(obj_hists[i])
-                f0 = obj_hists[i]
-            end
-        end
-    end
+    f0 = length(f_hists[prob][algo]) == 0 ? Inf : f_hists[prob][algo][1]
     return f0
 end
-accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}) = ((f_hists[prob][algo][k] - f_0(f_hists, prob, algo))/(f_star(f_hists, prob) - f_0(f_hists, prob, algo)))
+
+function f_0(f_hists, prob::Int)
+    algos = collect(keys(f_hists[1]))
+    n_algos = length(algos)
+    @assert n_algos > 1 "Trying to compare only one algorithm for performace/data profiles"
+
+    f0 = length(f_hists[1]) == 0 ? Inf : f_hists[1][1]
+    for a in 2:n_algos
+        # Routine to select the highest fist feasible f0
+        candidate_f0 = length(f_hists[prob][algos[a]]) == 0 ? Inf : f_hists[prob][algos[a]][1]
+        if f0 < candidate_f0
+            f0 = candidate_f0
+        end
+    end  
+    return f0
+end
+
+
+function accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String})
+    f_N = length(f_hists[prob][algo]) == 0 ? Inf : f_hists[prob][algo][k]
+    return ((f_N - f_0(f_hists, prob))/(f_star(f_hists, prob) - f_0(f_hists, prob)))
+end
 
 function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real)
     Nap = Inf
@@ -98,9 +108,7 @@ function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Uni
         y[l] = ρ
         count = 0
     end
-    #=plot!(αs, y, linetype=:steppre, label = "Algorithm $algo")
-    xlabel!("Ratio of number of evaluations")
-    ylabel!("Proportion of τ-solved problems")=#
+    return y
 end
 
 function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real; ω_toggle::Bool = false, λ_choice::String = "LL")
@@ -124,27 +132,25 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
         count = 0
     end
     return y
-    #=plot!(ks, y, linetype=:steppre, label = "Algorithm $a")
-    xlabel!("Groups of (p+11) evaluations")
-    ylabel!("Proportion of τ-solved problems")=#
 end
 
-#=function accuracy_profile(ds, a::Int)
+function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{Int, String})
     count = 0
-    y = []
-    k = length(N[a])
-    @inbounds for d in ds
-        @inbounds for p in P
-            f_acc_tot = accuracy(f, k, p, a)
+    @inbounds for i in eachindex(ds)
+        d = ds[i]
+        @inbounds for prob in eachindex(prob_list)
+            k = length(f_hist[prob][algo])
+            f_acc_tot = accuracy(f_hist, k, prob, algo)
+            if isinf(f_acc_tot)
+                f_acc_tot = 0.0
+            end
             if  -log10(1 - f_acc_tot) ≥ d
                 count += 1
             end
         end
-        ratio = count / (card_P)
-        push!(y, ratio)
+        ratio = count / (length(prob_list))
+        y[i] = ratio
         count = 0
     end
-    plot!(ds, y, linetype=:steppre, label = "Algorithm $a")
-    ylabel!(L"Ratio of $f_{acc}^{N_{a,p}^{tot}}$ with more than d decimals")
-    xlabel!("Number of decimals d")
-end=#
+    return y
+end
