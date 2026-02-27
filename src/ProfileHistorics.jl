@@ -25,7 +25,7 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilev
     y_all_hists = [Dict(algo_names .=> [zeros(2, bilevel_options.max_neval_upper) for i in 1:n_algos]) for k in 1:n_probs] # Storing the historic of y (lower variables) of each algo for each problem
     t_all_hists = [Dict(algo_names .=> [zeros(bilevel_options.max_neval_upper) for i in 1:n_algos]) for k in 1:n_probs] # Storing the historic of elapsed time of each algo for each problem
 
-    ω_list = load_object("numerics/time_and_omega_list/omega_list.jld2")
+    ω_list = load_object("numerics/logs/omega_list.jld2")
     for prob_iter in eachindex(prob_numbers)
         k = prob_numbers[prob_iter]
         model = get_bilevel_problem(k)

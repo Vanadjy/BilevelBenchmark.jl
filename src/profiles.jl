@@ -20,16 +20,15 @@ function conv_plot(f_hists, N_hists, prob::Int; logscale::Bool = false)
     display(graph)
 end
 
-function f_star(f_hists, prob::Int)
-    obj_hists = f_hists[prob]
-    algos = collect(keys(obj_hists))
+function f_star(f_hists, prob::Int, algo_list::Vector{Union{Int, String}})
+    algos = algo_list
     n_algos = length(algos)
 
     @assert n_algos > 1 "Trying to compare only one algorithm for performace/data profiles"
 
-    best_val = length(obj_hists[algos[1]]) == 0 ? Inf : obj_hists[algos[1]][end]
+    best_val = length(f_hists[prob][algos[1]]) == 0 ? Inf : f_hists[prob][algos[1]][end]
     for a in 2:n_algos
-        candidate_val = length(obj_hists[algos[a]]) == 0 ? Inf : obj_hists[algos[a]][end]
+        candidate_val = length(f_hists[prob][algos[a]]) == 0 ? Inf : f_hists[prob][algos[a]][end]
         if best_val > candidate_val
             best_val = candidate_val
         end
@@ -42,35 +41,37 @@ function f_0(f_hists, prob::Int, algo::Union{Int, String})
     return f0
 end
 
-function f_0(f_hists, prob::Int)
-    algos = collect(keys(f_hists[1]))
-    n_algos = length(algos)
+function f_0(f_hists, prob::Int, algo_list::Vector{Union{Int, String}})
+    n_algos = length(algo_list)
     @assert n_algos > 1 "Trying to compare only one algorithm for performace/data profiles"
 
-    f0 = length(f_hists[1]) == 0 ? Inf : f_hists[1][1]
+    f0 = length(f_hists[prob][algo_list[1]]) == 0 ? -Inf : f_hists[prob][algo_list[1]][1]
     for a in 2:n_algos
-        # Routine to select the highest fist feasible f0
-        candidate_f0 = length(f_hists[prob][algos[a]]) == 0 ? Inf : f_hists[prob][algos[a]][1]
+        # Routine to select the highest first feasible f0
+        candidate_f0 = length(f_hists[prob][algo_list[a]]) == 0 ? -Inf : f_hists[prob][algo_list[a]][1]
         if f0 < candidate_f0
             f0 = candidate_f0
         end
-    end  
+    end
+    # If f0 is -Inf, then no algorithm found a feasible point, so we set f0 to NaN
+    f0 = (f0 == -Inf ? NaN : f0)
     return f0
 end
 
 
-function accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String})
+function accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}, algo_list::Vector{Union{Int, String}})
     f_N = length(f_hists[prob][algo]) == 0 ? Inf : f_hists[prob][algo][k]
-    return ((f_N - f_0(f_hists, prob))/(f_star(f_hists, prob) - f_0(f_hists, prob)))
+    return ((f_N - f_0(f_hists, prob, algo_list))/(f_star(f_hists, prob, algo_list) - f_0(f_hists, prob, algo_list)))
 end
 
-function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real)
+function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real, algo_list::Vector{Union{Int, String}})
     Nap = Inf
     Tap = false
     i = 1
+    @assert length(N_hists[prob][algo]) == length(f_hists[prob][algo]) "ERROR: The length of N_hist and f_hist should be the same for problem $prob and algorithm $algo."
     while !(Tap || i >= length(N_hists[prob][algo]))
         i += 1
-        if accuracy(f_hists, i, prob, algo) ≥ 1 - τ
+        if accuracy(f_hists, i, prob, algo, algo_list) ≥ 1 - τ
             Nap = N_hists[prob][algo][i]
             Tap = true
         end
@@ -78,14 +79,13 @@ function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real)
     return Nap, Tap
 end
 
-function rap(f_hists, N_hists, algo::Union{Int, String}, prob::Union{Int, String}, τ::Real)
-    Nap_ref, Tap_ref = Nap(f_hists, N_hists, algo, prob, τ)
+function rap(f_hists, N_hists, algo::Union{Int, String}, prob::Union{Int, String}, τ::Real, algo_list::Vector{Union{Int, String}})
+    Nap_ref, Tap_ref = Nap(f_hists, N_hists, algo, prob, τ, algo_list)
     champ_Nap = Nap_ref
     rap = Inf
     if Tap_ref
-        all_algos = collect(keys(f_hists[prob]))
-        for alg in all_algos
-            Nap_algo, Tap_algo = Nap(f_hists, N_hists, alg, prob, τ)
+        for alg in algo_list
+            Nap_algo, Tap_algo = Nap(f_hists, N_hists, alg, prob, τ, algo_list)
             if Tap_algo && (Nap_algo < champ_Nap)
                 champ_Nap = Nap_algo
             end
@@ -95,12 +95,12 @@ function rap(f_hists, N_hists, algo::Union{Int, String}, prob::Union{Int, String
     return rap
 end
 
-function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real)
+function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real, algo_list::Vector{Union{Int, String}})
     count = 0
     @inbounds for l in eachindex(αs)
         α = αs[l]
         @inbounds for prob in eachindex(prob_list)
-            if (rap(f_hist, N_hist, algo, prob, τ) ≤ α)
+            if (rap(f_hist, N_hist, algo, prob, τ, algo_list) ≤ α)
                 count += 1
             end
         end
@@ -111,14 +111,14 @@ function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Uni
     return y
 end
 
-function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real; ω_toggle::Bool = false, λ_choice::String = "LL")
+function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real, algo_list::Vector{Union{Int, String}}; λ_toggle::Bool = false, λ_choice::String = "LL")
     count = 0
     @inbounds for l in eachindex(ks)
         k = ks[l]
         @inbounds for prob in eachindex(prob_list)
-            Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ)
+            Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ, algo_list)
             model = get_bilevel_problem(prob_list[prob])
-            if ω_toggle # if we scaled the UL evaluations with ω
+            if λ_toggle # if we scaled the UL evaluations with λ
                 dimprob = λ_choice == "LL" ? model.dim[2] + 1 : model.dim[1] + 1
             else
                 dimprob = model.dim[2]*(model.dim[1] +1)
@@ -134,14 +134,14 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
     return y
 end
 
-function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{Int, String})
+function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{Int, String}, algo_list::Vector{Union{Int, String}})
     count = 0
     @inbounds for i in eachindex(ds)
         d = ds[i]
         @inbounds for prob in eachindex(prob_list)
             k = length(f_hist[prob][algo])
-            f_acc_tot = accuracy(f_hist, k, prob, algo)
-            if isinf(f_acc_tot)
+            f_acc_tot = accuracy(f_hist, k, prob, algo, algo_list)
+            if isinf(f_acc_tot) || isnan(f_acc_tot)
                 f_acc_tot = 0.0
             end
             if  -log10(1 - f_acc_tot) ≥ d

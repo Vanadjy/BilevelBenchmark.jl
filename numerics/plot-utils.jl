@@ -9,7 +9,7 @@ mutable struct HubOPtions{B, S}
     draw_profiles_adjusted::B
     confirm_profiles::B
     save_logs::B
-    ω_toggle::B
+    λ_toggle::B
 
     function HubOPtions{B, S}(;
                     generate_files::B = true,
@@ -22,7 +22,7 @@ mutable struct HubOPtions{B, S}
                     draw_profiles_adjusted::B = false,
                     confirm_profiles::B = false,
                     save_logs::B = false,
-                    ω_toggle::B = false
+                    λ_toggle::B = false
         ) where {B <: Bool, S <: String}
 
         @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
@@ -42,7 +42,7 @@ mutable struct HubOPtions{B, S}
                 draw_profiles_adjusted,
                 confirm_profiles,
                 save_logs,
-                ω_toggle
+                λ_toggle
         )
     end
 end
@@ -65,20 +65,20 @@ function dec_scale(n::Int)
     return vcat(Int.([j*10^k+i*10^(k-1) for j in 0.0:(n/10^k)-1 for i in 1.0:9.0]), n)
 end
 
-function Nap_Matrix(f_hists, N_hists, algo_names::Vector{String}, all_probs::Vector{Int}, τ::Real)
+function Nap_Matrix(f_hists, N_hists, algo_names::Vector{Union{Int, String}}, all_probs::Vector{Int}, τ::Real)
     na = length(algo_names)
     np = length(all_probs)
 
     NapMatrix = zeros(Float64, np, na)
     for a in eachindex(algo_names)
         for p in eachindex(all_probs)
-            NapMatrix[p, a] = Nap(f_hists, N_hists, algo_names[a], p, τ)[1]
+            NapMatrix[p, a] = Nap(f_hists, N_hists, algo_names[a], p, τ, algo_names)[1]
         end
     end
     return NapMatrix
 end
 
-function DataMatrix(F_all_hist, N_all_hist, algo_names::Vector{String})
+function DataMatrix(F_all_hist, N_all_hist, algo_names::Vector{Union{Int, String}})
     Data = Inf .* ones(eltype(F_all_hist[1]["Algo1"][1]), Int(N_all_hist[1]["Algo1"][end]), length(F_all_hist), length(keys(F_all_hists[1])))
     for p in eachindex(F_all_hist)
         for a in 1:length(keys(F_all_hists[1]))
