@@ -64,6 +64,11 @@ function accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, St
     return ((f_N - f_0(f_hists, prob, algo_list))/(f_star(f_hists, prob, algo_list) - f_0(f_hists, prob, algo_list)))
 end
 
+function accuracy(f_hists, k::Int, prob::Union{Int, String}, algo::Union{Int, String}, algo_list::Vector{Union{Int, String}}, f_star::Real)
+    f_N = length(f_hists[prob][algo]) == 0 ? Inf : f_hists[prob][algo][k]
+    return ((f_N - f_0(f_hists, prob, algo_list))/(f_star - f_0(f_hists, prob, algo_list)))
+end
+
 function Nap(f_hists, N_hists, algo::Union{Int, String}, prob::Int, τ::Real, algo_list::Vector{Union{Int, String}})
     Nap = Inf
     Tap = false
@@ -111,7 +116,7 @@ function perf_profile!(y, αs, f_hist, N_hist, prob_list::Vector{Int}, algo::Uni
     return y
 end
 
-function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real, algo_list::Vector{Union{Int, String}}; λ_toggle::Bool = false, λ_choice::String = "LL")
+function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Union{Int, String}, τ::Real, algo_list::Vector{Union{Int, String}}; λ_toggle::Bool = false, λ_choice::String = "UL", budget_UL::Int = 300, budget_LL::Int = 100, effort_choice::String = "UL")
     count = 0
     @inbounds for l in eachindex(ks)
         k = ks[l]
@@ -119,9 +124,15 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
             Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ, algo_list)
             model = get_bilevel_problem(prob_list[prob])
             if λ_toggle # if we scaled the UL evaluations with λ
-                dimprob = λ_choice == "LL" ? model.dim[2] + 1 : model.dim[1] + 1
-            else
-                dimprob = model.dim[2]*(model.dim[1] +1)
+                dimprob = (λ_choice == "LL") ? (model.dim[2] + 1) : (model.dim[1] + 1)
+            else # otherwise, depends on the budget choice
+                if effort_choice == "UL"
+                    dimprob = model.dim[1] + 1
+                elseif effort_choice == "LL"
+                    dimprob = model.dim[2] +1
+                else
+                    dimprob = model.dim[1] * model.dim[2] + 1
+                end
             end
             if Nap_data ≤ k * (dimprob) * Tap_data
                 count += 1
@@ -134,13 +145,19 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
     return y
 end
 
-function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{Int, String}, algo_list::Vector{Union{Int, String}})
+function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{Int, String}, algo_list::Vector{Union{Int, String}}; opt_known::Bool = false)
     count = 0
     @inbounds for i in eachindex(ds)
         d = ds[i]
         @inbounds for prob in eachindex(prob_list)
             k = length(f_hist[prob][algo])
-            f_acc_tot = accuracy(f_hist, k, prob, algo, algo_list)
+            if opt_known
+                bilevel_prob = get_bilevel_problem(prob_list[prob])
+                f_star = get_opt_val(bilevel_prob)
+                f_acc_tot = accuracy(f_hist, k, prob, algo, algo_list, f_star)
+            else
+                f_acc_tot = accuracy(f_hist, k, prob, algo, algo_list)
+            end
             if isinf(f_acc_tot) || isnan(f_acc_tot)
                 f_acc_tot = 0.0
             end
@@ -148,7 +165,7 @@ function accuracy_profile!(y, ds, f_hist, prob_list::Vector{Int}, algo::Union{In
                 count += 1
             end
         end
-        ratio = count / (length(prob_list))
+        ratio = count / length(prob_list)
         y[i] = ratio
         count = 0
     end

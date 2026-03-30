@@ -4,7 +4,7 @@ JuMP_uncompatible = [3, 12, 14, 15, 16, 17, 18, 21, 32, 33, 34, 36, 40, 41, 42, 
 prob_numbers = filter(x -> !(x in JuMP_uncompatible), all_probs) # Filter out incompatible problems
 fail_to_start = [] # List to store problems that Ipopt has not been able to start the optimization - try to use another solver
 failed_probs = [] # List to store problems that failed the tests
-# DISCLAIMER BilevelJuMP cannot handle lower level objective that is not affine or qudratic, so they are omitted in the tests.
+# DISCLAIMER BilevelJuMP cannot handle lower level objective that is not affine or quadratic, so they are omitted in the tests.
 
 @testset "BOLIB.jl" begin
   for prob_no in prob_numbers

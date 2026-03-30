@@ -2,7 +2,7 @@ export GridSearch_subsolver, LL_subsolver, Bilevel_DS_WithoutCoupling, Biphase_f
 
 using NOMAD, Printf
 
-using Optimization, OptimizationNOMAD, Optim, OptimizationOptimJL
+using Optimization, OptimizationNOMAD, Optim, PRIMA, Evolutionary
 
 function GridSearch_subsolver(f,
                               g,
@@ -79,31 +79,27 @@ function CS_subsolver(f, g, y0, t; neval_tot = 100, δ0 = 1.0, ϵ = 1e-6, τ = 1
 end
 
 function LL_subsolver(model::BilevelProblem,
-                      i::Int,
-                      xk,
+                      t, 
                       yk,
-                      subsolver::String,
-                      D::Matrix{Float64};
+                      subsolver::String;
                       Δk::Float64 = 1.0,
                       δk::Float64 = 1/2,
                       nomad_options::NOMADOptions = NOMADOptions(),
                       max_neval_lower::Int = 100
     )
-    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "CS"]
+    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "CS", "COBYLA", "NelderMead", "CMAES"]
     nx = model.dim[1]
     ny = model.dim[2]
     yk_new = similar(yk)
-    fk_new = zero(eltype(xk))
+    fk_new = zero(eltype(t))
     neval_LL = 0
     # Compute optimal answer of lower level on each poll point
     if subsolver == "GridSearch"
-        t = xk + δk * D[:, i]
         # Apply Grid Search on the local frame of size Δk
-        yk_new, fk_new = GridSearch_subsolver(model.f_func, model.g_func, t, yk .- Δk*ones(eltype(xk), ny), yk .+ Δk*ones(eltype(xk), ny); num_points = max_neval_lower)
+        yk_new, fk_new = GridSearch_subsolver(model.f_func, model.g_func, t, yk .- Δk*ones(eltype(t), ny), yk .+ Δk*ones(eltype(t), ny); num_points = max_neval_lower)
         neval_LL = max_neval_lower
     elseif subsolver == "NelderMead"
         y0 = model.xy0[nx+1:nx+ny]
-        t = xk + δk * D[:, i]
         f_bb(y, t) = (any(>(0), g(t, y))) ? 1e16 : f(t, y)
         bb_func = OptimizationFunction(f_bb)
         prob = OptimizationProblem(bb_func, y0, t)
@@ -112,11 +108,9 @@ function LL_subsolver(model::BilevelProblem,
         fk_new = sol.objective
         neval_LL = sol.fcalls # FIXME pas sûr que ce soit la bonne méthode
     elseif subsolver == "CS"
-        t = xk + δk * D[:, i]
         yk_new, fk_new, neval_LL = CS_subsolver(model.f_func, model.g_func, yk, t; neval_tot = max_neval_lower, δ0 = Δk)
     elseif subsolver == "NOMAD"
         # Apply NOMAD solver
-        t = xk + δk * D[:, i]
         f = model.f_func
         counter = Ref(0)
         function bb(y)
@@ -160,7 +154,7 @@ function LL_subsolver(model::BilevelProblem,
                 neval_LL = counter[] # total number of bb calls
             else
                 yk_new .= yk
-                fk_new = model.f_func(xk, yk)
+                fk_new = model.f_func(t, yk)
                 neval_LL = max_neval_lower
             end
         elseif nomad_options.start_points == "yk-1"
@@ -171,12 +165,98 @@ function LL_subsolver(model::BilevelProblem,
                 neval_LL = counter[] # total number of bb calls
             else
                 yk_new .= yk
-                fk_new = model.f_func(xk, yk)
+                fk_new = model.f_func(t, yk)
                 neval_LL = max_neval_lower
             end
         else
             @error "Start points must be either 'y0' or 'yk-1'. Other start points are not supported yet."
         end
+
+    elseif subsolver == "COBYLA"
+        f(y) = model.f_func(t, y)
+        ineq_cons(y) = model.g_func(t, y)
+        yk_new, info = cobyla(f, model.xy0[nx+1:nx+ny]; maxfun = 1000*ny, nonlinear_ineq = ineq_cons, rhoend = 1e-6) # rhoend = 1e-16 to avoid early stopping of COBYLA
+        # managing if constraints violated
+        if info.cstrv <= 1e-6
+            fk_new = info.fx
+            neval_LL = info.nf
+        else
+            yk_new .= yk
+            fk_new = model.f_func(t, yk)
+            neval_LL = max_neval_lower
+        end
+    elseif subsolver == "GP" # TODO: not tested yet
+        @warn "The GP subsolver is not tested yet. Use with caution and check the results."
+        # Black box definition
+        function blackbox(x)
+            y = model.f_func(t, x)
+            z = model.g_func(t, x)
+
+            return vcat(y, z)
+        end
+        # Problem definition
+        problem() = BossProblem(;
+        f = blackbox,
+        y_max = [Inf, zeros(model.dim[4])],              # g(xk,y) < 0
+        acquisition = ExpectedImprovement(;
+            fitness = LinFitness([1, 0]),   # maximize y
+        ),
+        model = nonparametric(), # or `parametric()` or `semiparametric()`
+        data = init_data(),
+        )
+
+        nonparametric() = GaussianProcess(;
+        kernel = BOSS.Matern32Kernel(),
+        amplitude_priors = amplitude_priors(),
+        lengthscale_priors = lengthscale_priors(),
+        noise_std_priors = noise_std_priors(),
+        )
+        noise_std_priors() = fill(truncated(Normal(0., 0.1); lower=0.), 2)
+        # noise_std_priors() = fill(Dirac(0.1), 2)
+        amplitude_priors() = fill(truncated(Normal(0., 5.); lower=0.), 2)
+        # amplitude_priors() = fill(Dirac(5.), 2)
+        lengthscale_priors() = fill(Product([truncated(Normal(0., 20/3); lower=0.)]), 2)
+        # lengthscale_priors() = fill(Product(fill(Dirac(1.), 1)), 2)
+
+        # Model fitter
+        map_fitter() = OptimizationMAP(;
+            algorithm = NEWUOA(),
+            multistart = 20,
+            parallel = false, # set to true for parallel optimization runs
+            rhoend = 1e-4
+        )
+
+        acq_maximizer() = OptimizationAM(;
+            algorithm = LBFGS(),
+            multistart = 20,
+            parallel = false, # set to true for parallel optimization runs
+            rhoend = 1e-4,
+        )
+
+        function init_data()
+            X = [10.;;]
+            Y = hcat(blackbox.(eachcol(X))...)
+            return ExperimentData(X, Y)
+        end
+
+        prob = problem()
+        bo!(prob;
+            model_fitter = map_fitter(), # or `bi_fitter()`
+            acq_maximizer = acq_maximizer(),
+            term_cond = IterLimit(10),
+            options = options(),
+        )
+
+        yk_new, fk_new = result(prob) # TODO access to the number of LL evaluations ?
+    elseif subsolver == "CMAES"
+        f_cmaes(y) = model.f_func(t, y)
+        g_cmaes(y) = model.g_func(t, y)
+        # Nonlinear constraints are treated by a penalty method
+        constr = PenaltyConstraints(10.0, -Inf.*ones(ny), Inf.*ones(ny), -Inf.*ones(model.dim[4]), zeros(model.dim[4]), g_cmaes)
+        res = Evolutionary.optimize(f_cmaes, constr, model.xy0[nx+1:nx+ny], CMAES(), Evolutionary.Options(abstol = 1e-12, reltol = 1e-12, iterations=1000*ny))
+        yk_new = Evolutionary.minimizer(res)
+        fk_new = Evolutionary.minimum(res)
+        neval_LL = Evolutionary.iterations(res)
     else
         @error "Subsolver $subsolver is not known or implemented. Try one of the subsolvers among $subsolver_avail"
     end
@@ -277,9 +357,9 @@ function Bilevel_DS_WithoutCoupling(model::BilevelProblem,
         end
         while (i < size(D, 2)) && !(stop_poll) && (neval_upper < max_neval_upper)
             i += 1
-
+            
             t = xk + δk * D[:, i]
-            yk_new, fk_new, neval_lower = LL_subsolver(model, i, xk, yk, subsolver, D; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny * max_neval_lower)
+            yk_new, fk_new, neval_lower = LL_subsolver(model, t, yk, subsolver; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny * max_neval_lower)
 
             neval_upper += ω
             neval += neval_upper + neval_lower
@@ -508,13 +588,12 @@ function Bilevel_DS(model::BilevelProblem,
         end
         while (i < size(D, 2)) && !(stop_poll) && (neval_upper < max_neval_upper)
             i += 1
-
-            yk_new, fk_new, N_LL = LL_subsolver(model, i, xk, yk, subsolver, D; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny * max_neval_lower)
+            t = xk + δk * D[:, i]
+            yk_new, fk_new, N_LL = LL_subsolver(model, t, yk, subsolver ; Δk = Δk, δk = δk, nomad_options = nomad_options, max_neval_lower = ny * max_neval_lower)
 
             neval_upper += 1
             neval_lower += N_LL
             # neval += neval_upper + neval_lower
-            t = xk + δk * D[:, i]
             Fk_new = F(t, yk_new)
 
             # Check feasibility

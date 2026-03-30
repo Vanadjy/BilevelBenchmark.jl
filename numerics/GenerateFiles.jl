@@ -1,5 +1,5 @@
 function generate_files!(prob_numbers::Vector{Int}, 
-                         algo_names::Vector{String},
+                         algo_names::Vector{Union{String, Int}},
                          bilevel_options::BilevelOptions;
                          cons_handle::String = "PB", 
                          save::Bool = true,

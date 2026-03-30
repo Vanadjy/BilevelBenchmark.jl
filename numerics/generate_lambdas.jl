@@ -1,9 +1,9 @@
 using JLD2, BilevelBenchmark
 
-function generate_omega_list(pb_bank; nb_runs::Int = 100)
+function generate_lambda_list(pb_bank; nb_runs::Int = 100)
     t_UL_list = zeros(length(pb_bank))
     t_LL_list = similar(t_UL_list)
-    ω_list = similar(t_UL_list)
+    λ_list = similar(t_UL_list)
     @inbounds for i in eachindex(pb_bank)
         # Get the model and initial points
         prob = pb_bank[i]
@@ -39,21 +39,19 @@ function generate_omega_list(pb_bank; nb_runs::Int = 100)
             t_LL += t_LL_i
         end
 
-        # Compute the ratio for ω
+        # Compute the ratio for λ
         t_UL_list[prob] = t_UL/nb_runs
         t_LL_list[prob] = t_LL/nb_runs
-        ω_list[prob] = t_UL / t_LL
+        λ_list[prob] = t_LL / t_UL
     end
 
-    cd("numerics/time_and_omega_list")
-    save_object("omega_list.jld2", ω_list)
-    save_object("t_UL_list.jld2", t_UL_list)
-    save_object("t_LL_list.jld2", t_LL_list)
-    cd("/home/dijovale/Documents/Dijon_PhD/P1-BiObjBenchmarking/BilevelBenchmark")
-    return ω_list
+    save_object(joinpath("numerics/logs", "lambda_list.jld2"), λ_list)
+    save_object(joinpath("numerics/logs", "t_UL_list.jld2"), t_UL_list)
+    save_object(joinpath("numerics/logs", "t_LL_list.jld2"), t_LL_list)
+    return λ_list
 end
 
 all_probs = collect(1:173)
 issued_probs = [36, 49, 50, 51, 138, 127, 131, 173]
 prob_numbers = filter(x -> !(x in issued_probs), all_probs)
-generate_omega_list(prob_numbers)
+generate_lambda_list(prob_numbers)

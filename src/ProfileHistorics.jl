@@ -2,7 +2,7 @@ export Profile_Historics
 
 using JLD2
 
-function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilevel_options::BilevelOptions; cons_handle::String = "PB", start_point::String = "y0") where {I <: Int, S <:String}
+function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{Union{S, I}}, bilevel_options::BilevelOptions; cons_handle::String = "PB", start_point::String = "y0") where {I <: Int, S <:String}
     ## Listing the problems ##
     n_probs = length(prob_numbers)
 
@@ -13,7 +13,12 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilev
     options2 = NOMADOptions(max_bb_eval = bilevel_options.max_neval_lower, quad_model_search = bilevel_options.search, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle, start_points = start_point) # ORTHO N+1 NEG and no search
 
     options3 = NOMADOptions(max_bb_eval = bilevel_options.max_neval_lower) # Default NOMAD (ORTHO 2N and quadratic search)
-    All_options = Dict(algo_names .=> [options1, options2, options3])
+    
+    options4 = "COBYLA"
+
+    options5 = "CMAES"
+
+    All_options = Dict(algo_names .=> [options1, options2, options3, options4, options5])
 
     # Instantiate historic storages ##
     N_UL_all_hists = [Dict(algo_names .=> [zeros(bilevel_options.max_neval_upper) for i in 1:n_algos]) for k in 1:n_probs] # Storing the historic of BB evaluations of each algo for each problem
@@ -37,6 +42,36 @@ function Profile_Historics(prob_numbers::Vector{I}, algo_names::Vector{S}, bilev
             if options == "CS"
                 x, y, Fbest, Historics = Bilevel_DS(model,
                                     "CS",
+                                    ωk,
+                                    D;
+                                    bilevel_options = bilevel_options
+                )
+
+                N_UL_all_hists[prob_iter][algo] = Historics[:N_UL_hist]
+                N_LL_all_hists[prob_iter][algo] = Historics[:N_LL_hist]
+                F_all_hists[prob_iter][algo] = Historics[:Fhist]
+                f_all_hists[prob_iter][algo] = Historics[:fhist]
+                x_all_hists[prob_iter][algo] = Historics[:xhist]
+                y_all_hists[prob_iter][algo] = Historics[:yhist]
+                t_all_hists[prob_iter][algo] = Historics[:thist]
+            elseif options == "COBYLA"
+                x, y, Fbest, Historics = Bilevel_DS(model,
+                                    "COBYLA",
+                                    ωk,
+                                    D;
+                                    bilevel_options = bilevel_options
+                )
+
+                N_UL_all_hists[prob_iter][algo] = Historics[:N_UL_hist]
+                N_LL_all_hists[prob_iter][algo] = Historics[:N_LL_hist]
+                F_all_hists[prob_iter][algo] = Historics[:Fhist]
+                f_all_hists[prob_iter][algo] = Historics[:fhist]
+                x_all_hists[prob_iter][algo] = Historics[:xhist]
+                y_all_hists[prob_iter][algo] = Historics[:yhist]
+                t_all_hists[prob_iter][algo] = Historics[:thist]
+            elseif options == "CMAES"
+                x, y, Fbest, Historics = Bilevel_DS(model,
+                                    "CMAES",
                                     ωk,
                                     D;
                                     bilevel_options = bilevel_options
