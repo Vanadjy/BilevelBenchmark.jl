@@ -124,14 +124,20 @@ function data_profile!(y, ks, f_hist, N_hist, prob_list::Vector{Int}, algo::Unio
             Nap_data, Tap_data = Nap(f_hist, N_hist, algo, prob, τ, algo_list)
             model = get_bilevel_problem(prob_list[prob])
             if λ_toggle # if we scaled the UL evaluations with λ
-                dimprob = (λ_choice == "LL") ? (model.dim[2] + 1) : (model.dim[1] + 1)
+                if effort_choice == "UL"
+                    dimprob = (model.dim[1] + 1)
+                elseif effort_choice == "LL"
+                    dimprob = (model.dim[2] + 1)
+                else
+                    dimprob = (model.dim[1] + 1) * (model.dim[2] + 1)
+                end
             else # otherwise, depends on the budget choice
                 if effort_choice == "UL"
                     dimprob = model.dim[1] + 1
                 elseif effort_choice == "LL"
                     dimprob = model.dim[2] +1
                 else
-                    dimprob = model.dim[1] * model.dim[2] + 1
+                    dimprob = (model.dim[1] + 1) * (model.dim[2] + 1)
                 end
             end
             if Nap_data ≤ k * (dimprob) * Tap_data

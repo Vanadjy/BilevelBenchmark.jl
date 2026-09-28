@@ -42,7 +42,7 @@ function generate_lambda_list(pb_bank; nb_runs::Int = 100)
         # Compute the ratio for λ
         t_UL_list[prob] = t_UL/nb_runs
         t_LL_list[prob] = t_LL/nb_runs
-        λ_list[prob] = t_LL / t_UL
+        λ_list[prob] =  t_UL / t_LL
     end
 
     save_object(joinpath("numerics/logs", "lambda_list.jld2"), λ_list)

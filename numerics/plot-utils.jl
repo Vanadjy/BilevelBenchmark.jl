@@ -28,7 +28,7 @@ mutable struct HubOPtions{B, S}
         @assert draw_profiles_adjusted <= referee_please "Cannot adjust the profiles if no referee."
         @assert generate_F_adjusted <= referee_please "Cannot generate F adjusted if no referee."
         @assert draw_conv_adjusted <= referee_please "Cannot draw adjusted convergence plot if no referee."
-        @assert typeof_referee ∈ ["All_All", "All_Final", "Single_Final", "All_Backward"] "Invalid type of referee. Must be one of: All_All, All_Final, Single_Final."
+        @assert typeof_referee ∈ ["Intern_EndPoint", "Intern_Complete", "Intern_Reverse", "Extern_EndPoint", "Extern_Complete", "Extern_Reverse"] "Invalid type of referee. Must be one of: Intern_EndPoint, Intern_Complete, Intern_Reverse, Extern_EndPoint, Extern_Complete, Extern_Reverse."
         typeof_referee = (referee_please ? typeof_referee : "")
 
         return new{B, S}(
@@ -65,6 +65,22 @@ function dec_scale(n::Int)
     return vcat(Int.([j*10^k+i*10^(k-1) for j in 0.0:(n/10^k)-1 for i in 1.0:9.0]), n)
 end
 
+function markers_dec(num_markers::Int, x_data, y_data, xmax)
+    thresholds = [k*xmax/num_markers for k in 1:num_markers]
+    markers_x = [x_data[1]]
+    markers_y = [y_data[1]]
+    for i in 1:num_markers
+        new_marker_idx = argmin(abs.(x_data .- thresholds[i]))
+        #println("New marker index: $new_marker_idx, x value at new marker: $(x_data[new_marker_idx]), y value at new marker: $(y_data[new_marker_idx])")
+        new_marker_x = x_data[new_marker_idx]
+        push!(markers_x, new_marker_x)
+        push!(markers_y, y_data[new_marker_idx])
+    end
+    @assert length(markers_x) == num_markers + 1 "Number of markers should be equal to num_markers + 1 (including the first point)."
+    @assert length(markers_y) == num_markers + 1 "Number of markers should be equal to num_markers + 1 (including the first point)."
+    return markers_x, markers_y
+end
+
 function Nap_Matrix(f_hists, N_hists, algo_names::Vector{Union{Int, String}}, all_probs::Vector{Int}, τ::Real)
     na = length(algo_names)
     np = length(all_probs)
@@ -95,4 +111,31 @@ function ScaleDataDim(all_probs::Vector{Int})
         NpVector[p] = model.dim[1] + model.dim[2] + 1
     end
     return NpVector
+end
+
+function solved_by_no_algo(prob_numbers::Vector{Int}, algo_names::Vector{Union{Int, String}}, F_all_hists; verbose = false)
+    not_solved = Dict{String, Vector{Int}}(algo => Int[] for algo in algo_names)
+    solved_by_no_one = []
+    index_solved_by_no_one = Int[]
+
+    for p in eachindex(prob_numbers)
+        problem_p_not_solved = []
+        for a in algo_names
+            if F_all_hists[p][a][1] == F_all_hists[p][a][end] # Problem p not solved by algo a
+                push!(not_solved[a], prob_numbers[p])
+                push!(problem_p_not_solved, a)
+                if length(problem_p_not_solved) == length(algo_names) # Problem p not solved by any algorithm
+                    push!(solved_by_no_one, prob_numbers[p])
+                    push!(index_solved_by_no_one, p)
+                end
+            end
+        end
+    end
+    if verbose
+        println("Problems ", solved_by_no_one, " are solved by no algorithm.")
+        for a in algo_names
+            println("Algorithm $(a) did not solve ", length(not_solved[a])/length(prob_numbers)*100, "% of problems: ", not_solved[a])
+        end
+    end
+    return index_solved_by_no_one
 end

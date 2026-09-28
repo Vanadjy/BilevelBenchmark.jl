@@ -8,6 +8,7 @@ function referee_challenge(k::Int, model::BilevelProblem, xHists, yHists, fHists
     # Reoptimization using NOMAD - our referee
     new_f = Inf
     f = model.f_func
+    G = model.G_func
     x0y0 = model.xy0
     nx = model.dim[1]
     ny = model.dim[2]
@@ -32,7 +33,7 @@ function referee_challenge(k::Int, model::BilevelProblem, xHists, yHists, fHists
         else
             y_new, new_f, neval_lower = LL_subsolver(model, x_star, x0y0[nx+1:nx+ny], LL_solver_name; max_neval_lower = ny * 100)
         end
-        if new_f < f_star - tol_ref # The BEST referee found a strictly better solution than the algo
+        if (all(G(x_star, y_new) .<= 0.0)) && (new_f < f_star - tol_ref)  # The BEST referee found a strictly better solution than the algo AND is feasible w.r.t upper-level constraints
             @info "A referee found a better final solution than $algo on problem $prob at iterate $k"
             referee_flag = true
             break # If one referee found a better solution, we stop and consider that the algo is invalidated at this iterate
@@ -41,23 +42,20 @@ function referee_challenge(k::Int, model::BilevelProblem, xHists, yHists, fHists
     return referee_flag
 end
 
-function EndPoint_Referee(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB")
+function EndPoint_Referee(algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB", tol_ref::Float64 = 1e-3)
     algos_blames = Dict(algo_names .=> [Int[] for i in 1:length(algo_names)])
     res_matrix = [Vector{Int64}[] for i in 1:length(prob_numbers), j in 1:length(algo_names)]
     ignored_pbs = Int64[]
     for prob in eachindex(prob_numbers)
         model = get_bilevel_problem(prob_numbers[prob])
-        nomad_options = [NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle)]
+        nomad_options = Dict("Algo2" => NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
+                              "Algo3" => NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", quad_model_search = true, cons_handle = cons_handle))
         for a in eachindex(algo_names)
             algo = algo_names[a]
             if x_all_hists[prob][algo][end] !== x_all_hists[prob][algo][1] # If the algorithm did not moved from the starting point, ignore it
                 Random.seed!(seed)
                 k = length(f_all_hists[prob][algo])
-                flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options)
+                flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options; tol_ref = tol_ref)
                 if flag #referee found a better LL solution than algo
                     push!(algos_blames[algo], prob_numbers[prob])
                     #push!(res_matrix[prob, a], successful_refs)
@@ -73,17 +71,17 @@ function EndPoint_Referee(algo_names, prob_numbers, x_all_hists, y_all_hists, f_
     return algos_blames
 end
 
-function Complete_Referee!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB")
+function Complete_Referee!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB", tol_ref::Float64 = 1e-3)
     for prob in eachindex(prob_numbers)
         model = get_bilevel_problem(prob_numbers[prob])
-        nomad_options = Dict("Algo2" => NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle),
-                              "Algo3" => NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle))
+        nomad_options = Dict("Algo2" => NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
+                              "Algo3" => NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", quad_model_search = true, cons_handle = cons_handle))
         for algo in algo_names
             if x_all_hists[prob][algo][end] !== x_all_hists[prob][algo][1] # If the algorithm did not moved from the starting point, ignore it
                 k = length(f_all_hists[prob][algo])
                 while k >= 1
                     Random.seed!(seed)
-                    flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options)
+                    flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options; tol_ref = tol_ref)
                     if flag #referee found at least once a better LL solution than algo
                         F_all_hists_adjusted[prob][algo][k] = NaN # Set at Inf the corresponding value in the upper objective historic
                         N_all_hists_adjusted[prob][algo][k] = NaN # Set at Inf the corresponding value in the lower objective historic
@@ -110,21 +108,18 @@ end
 
 ## REFEREE FROM THE LAST ITERATE HISTORIC AND GOING BACKWARD ##
 
-function Reverse_Referee!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB")
+function Reverse_Referee!(F_all_hists_adjusted, N_all_hists_adjusted, algo_names, prob_numbers, x_all_hists, y_all_hists, f_all_hists, referees::Vector{Union{String, Int}}; max_budget::Int = 300, cons_handle::String = "PB", tol_ref::Float64 = 1e-3)
     for prob in eachindex(prob_numbers)
         model = get_bilevel_problem(prob_numbers[prob])
-        nomad_options = [NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, quad_model_search = true, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
-                       NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle)]
+        nomad_options = Dict("Algo2" => NOMADOptions(max_bb_eval = max_budget, cons_handle = cons_handle),
+                              "Algo3" => NOMADOptions(max_bb_eval = max_budget, direction_type = "ORTHO N+1 NEG", quad_model_search = true, cons_handle = cons_handle))
         for algo in algo_names
             if x_all_hists[prob][algo][end] !== x_all_hists[prob][algo][1] # If the algorithm did not moved from the starting point, ignore it
                 flag = true
                 k = length(f_all_hists[prob][algo])
                 while flag && k >= 1 # Once we found an admissible point in the historic, we stop
                     Random.seed!(seed)
-                    flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options)
+                    flag = referee_challenge(k, model, x_all_hists, y_all_hists, f_all_hists, prob, algo, referees, nomad_options; tol_ref = tol_ref)
                     if flag #referee found at least once a better LL solution than algo
                         F_all_hists_adjusted[prob][algo][k] = NaN # Set at Inf the corresponding value in the upper objective historic 
                         N_all_hists_adjusted[prob][algo][k] = NaN # Set at Inf the corresponding value in the lower objective historic

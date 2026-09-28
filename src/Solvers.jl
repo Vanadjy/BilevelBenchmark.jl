@@ -1,6 +1,6 @@
 export GridSearch_subsolver, LL_subsolver, Bilevel_DS_WithoutCoupling, Biphase_feas, Bilevel_DS, CS_subsolver
 
-using NOMAD, Printf
+using NOMAD, Printf, Random
 
 using Optimization, OptimizationNOMAD, Optim, PRIMA, Evolutionary
 
@@ -33,6 +33,42 @@ function GridSearch_subsolver(f,
                 fbest = fval
                 ybest .= y
             end
+        end
+    end
+
+    return ybest, fbest
+end
+
+function LHS_subsolver(
+    f,
+    g,
+    t,
+    n::Int,
+    p::Int,
+    l_bounds::Vector{Float64}, 
+    u_bounds::Vector{Float64})
+
+    # Generate LHS samples in [0, 1]
+    lhs_samples = Random.rand(p, n)
+    for i in 1:n
+        perm = Random.randperm(p)
+        lhs_samples[:, i] = (perm .- Random.rand(p)) ./ p
+    end
+
+    # Scale samples to the specified bounds
+    scaled_samples = zeros(p, n)
+    for i in 1:n
+        scaled_samples[:, i] = l_bounds[:] .+ lhs_samples[:, i] .* (u_bounds[:] - l_bounds[:])
+    end
+
+    fbest = Inf
+    ybest = zeros(p)
+
+    # Look for the best LHS feasible sample
+    for y in eachcol(scaled_samples)
+        if f(t, y) < fbest && all(≤(0), g(t, y))
+            fbest = f(t, y)
+            ybest .= y
         end
     end
 
@@ -87,7 +123,7 @@ function LL_subsolver(model::BilevelProblem,
                       nomad_options::NOMADOptions = NOMADOptions(),
                       max_neval_lower::Int = 100
     )
-    subsolver_avail = ["GridSearch", "NOMAD", "Ipopt", "CS", "COBYLA", "NelderMead", "CMAES"]
+    subsolver_avail = ["GridSearch", "LHS", "NOMAD", "Ipopt", "CS", "COBYLA", "NelderMead", "CMAES"]
     nx = model.dim[1]
     ny = model.dim[2]
     yk_new = similar(yk)
@@ -97,6 +133,10 @@ function LL_subsolver(model::BilevelProblem,
     if subsolver == "GridSearch"
         # Apply Grid Search on the local frame of size Δk
         yk_new, fk_new = GridSearch_subsolver(model.f_func, model.g_func, t, yk .- Δk*ones(eltype(t), ny), yk .+ Δk*ones(eltype(t), ny); num_points = max_neval_lower)
+        neval_LL = max_neval_lower
+    elseif subsolver == "LHS"
+        # Apply LHS on the local frame of size Δk
+        yk_new, fk_new = LHS_subsolver(model.f_func, model.g_func, t, ny*Int(1e5), ny, -1e6*ones(eltype(t), ny), 1e6*ones(eltype(t), ny))
         neval_LL = max_neval_lower
     elseif subsolver == "NelderMead"
         y0 = model.xy0[nx+1:nx+ny]
@@ -175,9 +215,9 @@ function LL_subsolver(model::BilevelProblem,
     elseif subsolver == "COBYLA"
         f(y) = model.f_func(t, y)
         ineq_cons(y) = model.g_func(t, y)
-        yk_new, info = cobyla(f, model.xy0[nx+1:nx+ny]; maxfun = 1000*ny, nonlinear_ineq = ineq_cons, rhoend = 1e-6) # rhoend = 1e-16 to avoid early stopping of COBYLA
+        yk_new, info = cobyla(f, model.xy0[nx+1:nx+ny]; maxfun = max_neval_lower, nonlinear_ineq = ineq_cons, rhoend = 1e-16) # rhoend = 1e-6 to avoid early stopping of COBYLA
         # managing if constraints violated
-        if info.cstrv <= 1e-6
+        if info.cstrv <= 1e-16
             fk_new = info.fx
             neval_LL = info.nf
         else
@@ -253,7 +293,7 @@ function LL_subsolver(model::BilevelProblem,
         g_cmaes(y) = model.g_func(t, y)
         # Nonlinear constraints are treated by a penalty method
         constr = PenaltyConstraints(10.0, -Inf.*ones(ny), Inf.*ones(ny), -Inf.*ones(model.dim[4]), zeros(model.dim[4]), g_cmaes)
-        res = Evolutionary.optimize(f_cmaes, constr, model.xy0[nx+1:nx+ny], CMAES(), Evolutionary.Options(abstol = 1e-12, reltol = 1e-12, iterations=1000*ny))
+        res = Evolutionary.optimize(f_cmaes, constr, model.xy0[nx+1:nx+ny], CMAES(), Evolutionary.Options(abstol = 1e-16, reltol = 1e-16, iterations=max_neval_lower))
         yk_new = Evolutionary.minimizer(res)
         fk_new = Evolutionary.minimum(res)
         neval_LL = Evolutionary.iterations(res)

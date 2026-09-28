@@ -79,7 +79,7 @@ mutable struct NOMADOptions{R, I}
         DirectionTypes = ["ORTHO 2N" # 2n directions, no quadratic models
                         "ORTHO N+1 NEG" # n directions, the (n+1)th is the negative sum of the n first.
                         "ORTHO N+1 QUAD" # n directions, the (n+1)th is found by solving a quadratic subproblem
-                        "ORTHO N+1 QUAD" # n directions, the (n+1)th is found by solving a quadratic subproblem
+                        "ORTHO 2N QUAD" # 2n directions, the (n+1)th is found by solving a quadratic subproblem
                         "N+1 UNI" # n+1 uniformly distributed directions
                         "SINGLE" # one direction
                         "DOUBLE" # two opposed direction
